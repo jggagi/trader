@@ -973,10 +973,10 @@ def main() -> None:
         st.header("分析设置")
         st.caption("输入美股/ETF 代码，或 A 股 6 位代码。例：SPY、AAPL、600519、000001。")
         default_ticker = get_default_ticker()
-        market_filter = st.segmented_control(
+        market_filter = st.selectbox(
             "ETF 市场",
             get_markets(),
-            default="全部",
+            index=0,
             help="先按市场缩小范围。",
         )
         style_filter = st.selectbox(
