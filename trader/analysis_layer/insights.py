@@ -131,6 +131,7 @@ def build_action_checklist(
     risk: dict[str, Any],
     move_pct: float | None,
     position_value: float,
+    ticker: str,
 ) -> list[str]:
     checklist = []
     if move_pct is not None and abs(move_pct) >= 5:
@@ -151,7 +152,7 @@ def build_action_checklist(
     if position_value > 0:
         checklist.append("把下面情景推演里的持仓影响与现金流、睡眠质量和其他资产一起看。")
     else:
-        checklist.append("输入你的 QQQ 持仓市值后，可以把价格情景转换成更直观的美元影响。")
+        checklist.append(f"输入你的 {ticker} 持仓市值后，可以把价格情景转换成更直观的美元影响。")
     return checklist
 
 

@@ -23,7 +23,8 @@ from trader.data_layer.factory import DataProvider, create_market_data_fetcher
 from trader.state_layer.parser import LocalDocumentParser
 
 
-st.set_page_config(page_title="QQQ Attribution", page_icon="QQQ", layout="wide")
+st.set_page_config(page_title="Market Lens", page_icon="📈", layout="wide")
+
 
 
 TIMEFRAME_OPTIONS = {
@@ -624,7 +625,7 @@ def render_header(snapshot: dict, metrics: dict, llm_available: bool) -> None:
     st.markdown(
         f"""
         <div class="app-header">
-            <div class="header-kicker">本地优先 · QQQ 归因分析</div>
+            <div class="header-kicker">本地优先 · 市场归因分析</div>
             <div class="header-row">
                 <div>
                     <div class="app-title">{html.escape(snapshot["ticker"])} 投资观察台</div>
@@ -653,10 +654,14 @@ def configure_streamlit_secrets() -> None:
     except Exception:
         return
 
-    for key in ("OPENAI_API_KEY", "OPENAI_MODEL", "APP_MODE"):
+    for key in ("OPENAI_API_KEY", "OPENAI_MODEL", "APP_MODE", "DEFAULT_TICKER"):
         value = secrets.get(key)
         if value and not os.getenv(key):
             os.environ[key] = str(value)
+
+
+def get_default_ticker() -> str:
+    return os.getenv("DEFAULT_TICKER", "SPY").strip().upper() or "SPY"
 
 
 def render_metrics(metrics: dict) -> None:
@@ -796,8 +801,9 @@ def main() -> None:
 
     with st.sidebar:
         st.header("分析设置")
-        st.caption("默认分析 QQQ。只想快速看一眼时，直接点下面的刷新即可。")
-        ticker = st.text_input("标的代码", value="QQQ").strip().upper() or "QQQ"
+        st.caption("输入任意美股、ETF 或指数代码。只想快速看一眼时，直接点下面的刷新即可。")
+        default_ticker = get_default_ticker()
+        ticker = st.text_input("标的代码", value=default_ticker).strip().upper() or default_ticker
         timeframe = st.selectbox(
             "观察周期",
             list(TIMEFRAME_OPTIONS),
@@ -813,7 +819,7 @@ def main() -> None:
         st.divider()
         st.subheader("我的情景推演")
         position_value = st.number_input(
-            "QQQ 持仓市值（美元）",
+            f"{ticker} 持仓市值（美元）",
             min_value=0.0,
             value=0.0,
             step=1000.0,
@@ -841,6 +847,7 @@ def main() -> None:
         risk=risk,
         move_pct=metrics.get("move_pct_raw"),
         position_value=position_value,
+        ticker=snapshot["ticker"],
     )
     scenario_table = build_scenario_table(price_frame, position_value, float(shock_pct))
     report_markdown = build_markdown_report(
@@ -882,7 +889,7 @@ def main() -> None:
         st.download_button(
             "下载本地 Markdown 报告",
             data=report_markdown,
-            file_name=f"{snapshot['ticker'].lower()}_local_report.md",
+            file_name=f"{snapshot['ticker'].lower()}_market_lens_report.md",
             mime="text/markdown",
             use_container_width=True,
         )

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: qqq-trader
+    name: market-lens
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
@@ -10,4 +10,5 @@ services:
         value: cloud
       - key: OPENAI_MODEL
         value: gpt-4o-mini
-
+      - key: DEFAULT_TICKER
+        value: SPY

@@ -14,6 +14,7 @@
 APP_MODE = "cloud"
 OPENAI_API_KEY = ""
 OPENAI_MODEL = "gpt-4o-mini"
+DEFAULT_TICKER = "SPY"
 ```
 
 The app works without `OPENAI_API_KEY`, using deterministic local fallback analysis.
@@ -29,6 +30,7 @@ Render settings:
 - Environment:
   - `APP_MODE=cloud`
   - `OPENAI_MODEL=gpt-4o-mini`
+  - `DEFAULT_TICKER=SPY`
   - `OPENAI_API_KEY`, optional
 
 Free Render services can sleep when idle, so first load can be slow.
@@ -44,4 +46,3 @@ Keep private files local:
 - API keys
 - Identity documents
 - Real portfolio exports
-

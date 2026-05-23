@@ -1,6 +1,6 @@
-# QQQ Trader
+# Market Lens
 
-A modular Streamlit app for QQQ market attribution, local investment dashboards, risk snapshots, scenario analysis, and skill-based critique.
+A modular Streamlit app for market attribution, local investment dashboards, risk snapshots, scenario analysis, and skill-based critique across tickers.
 
 ## Features
 
@@ -8,7 +8,7 @@ A modular Streamlit app for QQQ market attribution, local investment dashboards,
 - Yahoo Finance provider and Google Finance mock provider
 - Local portfolio parser placeholder that returns `{}`
 - Stateless attribution and critique calls
-- Chinese Streamlit UI for QQQ price/news context and roundtable output
+- Chinese Streamlit UI for ticker price/news context and roundtable output
 - Technical dashboard with 20/50 day moving averages
 - Risk snapshot with volatility and max drawdown
 - Position scenario table and Markdown report export
@@ -27,6 +27,7 @@ LLM calls are optional. Without `OPENAI_API_KEY`, the app returns deterministic 
 ```bash
 export OPENAI_API_KEY="..."
 export OPENAI_MODEL="gpt-4o-mini"
+export DEFAULT_TICKER="SPY"
 ```
 
 For development tests:
@@ -51,6 +52,7 @@ Recommended path: Streamlit Community Cloud.
 APP_MODE = "cloud"
 OPENAI_API_KEY = "your-api-key-if-you-want-ai-output"
 OPENAI_MODEL = "gpt-4o-mini"
+DEFAULT_TICKER = "SPY"
 ```
 
 Without `OPENAI_API_KEY`, the app still works with deterministic local fallback analysis.

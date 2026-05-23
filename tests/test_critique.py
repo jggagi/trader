@@ -12,7 +12,7 @@ class FakeLLM:
 def test_master_critique_runs_all_skills() -> None:
     snapshot = {
         "provider": "test",
-        "ticker": "QQQ",
+        "ticker": "SPY",
         "timeframe": "5d",
         "prices": [
             {"date": "2026-01-01", "open": 1, "high": 2, "low": 1, "close": 1, "volume": 10},
@@ -29,4 +29,3 @@ def test_master_critique_runs_all_skills() -> None:
 
     assert [view.name for view in critique.views] == list(MASTER_SKILLS)
     assert critique.metadata["portfolio_state_present"] is False
-

@@ -5,7 +5,7 @@ Use GitHub as the source of truth, local development for iteration, and Streamli
 ## Daily Start
 
 ```bash
-cd /Users/guoq/opc/qqq-trader
+cd /path/to/trader
 make pull
 make setup
 make run
@@ -99,4 +99,3 @@ If the cloud app looks stale:
 2. Check the Streamlit Cloud app logs.
 3. Reboot or redeploy from the Streamlit Cloud dashboard.
 4. Confirm the app is using branch `main` and entrypoint `app.py`.
-

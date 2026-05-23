@@ -52,7 +52,7 @@ def test_build_risk_snapshot_and_scenarios() -> None:
 def test_action_checklist_uses_position_context() -> None:
     technical = build_technical_snapshot(_sample_frame())
     risk = build_risk_snapshot(_sample_frame())
-    checklist = build_action_checklist(technical, risk, move_pct=3, position_value=0)
+    checklist = build_action_checklist(technical, risk, move_pct=3, position_value=0, ticker="SPY")
 
     assert len(checklist) == 4
-    assert "输入你的 QQQ 持仓市值" in checklist[-1]
+    assert "输入你的 SPY 持仓市值" in checklist[-1]

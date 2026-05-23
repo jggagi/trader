@@ -1,2 +1,1 @@
-"""Local-first QQQ attribution package."""
-
+"""Local-first market attribution package."""

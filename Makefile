@@ -4,7 +4,7 @@ PYTHON ?= python
 PORT ?= 8502
 
 help:
-	@echo "QQQ Trader workflow"
+	@echo "Market Lens workflow"
 	@echo ""
 	@echo "make setup      Install local dependencies"
 	@echo "make run        Run local Streamlit server on PORT=$(PORT)"
@@ -47,4 +47,3 @@ push:
 clean:
 	find . -type d -name "__pycache__" -prune -exec rm -rf {} +
 	rm -rf .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage
-

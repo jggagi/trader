@@ -106,7 +106,7 @@ def _local_critique(system_prompt: str, user_payload: dict[str, Any]) -> str:
     if "Warren Buffett" in system_prompt:
         return (
             f"本地视角：{ticker} 短期涨跌 {move_text} 不是核心。"
-            "真正要问的是 QQQ 最大权重公司的护城河、资本回报率和自由现金流是否仍然优秀。"
+            "真正要问的是这个标的背后资产的护城河、资本回报率和自由现金流是否仍然优秀。"
             "如果只是因为价格涨了才想追，需要先冷静。"
         )
     if "Charlie Munger" in system_prompt:
@@ -124,7 +124,7 @@ def _local_critique(system_prompt: str, user_payload: dict[str, Any]) -> str:
     if "Ray Dalio" in system_prompt:
         return (
             f"本地视角：{ticker} 的短期变化 {move_text} 要放在利率、通胀、流动性和风险偏好里看。"
-            "QQQ 对久期和增长预期敏感，宏观环境转向时波动会被放大。"
+            "不同资产对久期、增长预期、信用条件和流动性的敏感度不同，宏观环境转向时波动可能被放大。"
             "不要让单一资产承担全部周期风险。"
         )
     return f"本地视角：{ticker} 当前变化为 {move_text}，建议结合价格、新闻和仓位约束一起判断。"

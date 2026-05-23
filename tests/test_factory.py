@@ -9,10 +9,9 @@ def test_factory_returns_fetcher_for_google_mock() -> None:
 
 def test_google_mock_produces_structured_data() -> None:
     fetcher = create_market_data_fetcher("Google Finance Mock")
-    prices = fetcher.get_historical_prices("QQQ", "5d")
-    news = fetcher.get_recent_news("QQQ")
+    prices = fetcher.get_historical_prices("SPY", "5d")
+    news = fetcher.get_recent_news("SPY")
 
     assert len(prices) == 5
     assert prices[0].close > 0
     assert news[0].publisher == "Google Finance Mock"
-
