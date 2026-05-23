@@ -12,6 +12,7 @@ A modular Streamlit app for market attribution, local investment dashboards, ris
 - Technical dashboard with 20/50 day moving averages
 - Risk snapshot with volatility and max drawdown
 - Position scenario table and Markdown report export
+- Quick ETF picker for common large-cap, technology, and growth ETFs in US and China A-share markets
 
 ## Run Locally
 

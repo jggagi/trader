@@ -41,6 +41,28 @@ PROVIDER_HELP = {
     DataProvider.GOOGLE_MOCK.value: "离线演示数据",
 }
 
+ETF_PRESETS = {
+    "自定义输入": None,
+    "美股大盘 · SPY · S&P 500": "SPY",
+    "美股大盘 · VOO · Vanguard S&P 500": "VOO",
+    "美股科技成长 · QQQ · Nasdaq 100": "QQQ",
+    "美股科技成长 · QQQM · Nasdaq 100 低费率版本": "QQQM",
+    "美股科技 · VGT · 信息技术": "VGT",
+    "美股科技 · XLK · 科技精选行业": "XLK",
+    "美股成长 · VUG · 大盘成长": "VUG",
+    "美股成长 · SCHG · 大盘成长": "SCHG",
+    "美股成长 · IWF · Russell 1000 Growth": "IWF",
+    "美股半导体 · SMH · 半导体": "SMH",
+    "A股大盘 · 510300 · 沪深300ETF": "510300",
+    "A股大盘 · 510050 · 上证50ETF": "510050",
+    "A股科技成长 · 588000 · 科创50ETF": "588000",
+    "A股成长 · 159915 · 创业板ETF": "159915",
+    "A股成长 · 159949 · 创业板50ETF": "159949",
+    "A股半导体 · 512480 · 半导体ETF": "512480",
+    "A股科技 · 515000 · 科技ETF": "515000",
+    "A股芯片 · 159995 · 芯片ETF": "159995",
+}
+
 
 def inject_styles() -> None:
     st.markdown(
@@ -810,7 +832,18 @@ def main() -> None:
         st.header("分析设置")
         st.caption("输入美股/ETF 代码，或 A 股 6 位代码。例：SPY、AAPL、600519、000001。")
         default_ticker = get_default_ticker()
-        ticker = st.text_input("标的代码", value=default_ticker).strip().upper() or default_ticker
+        preset_label = st.selectbox(
+            "偏好 ETF 快捷选择",
+            list(ETF_PRESETS),
+            index=0,
+            help="这些只是常见的大盘、科技、成长风格 ETF 快捷入口，不构成投资建议。",
+        )
+        preset_ticker = ETF_PRESETS[preset_label]
+        if preset_ticker:
+            ticker = preset_ticker
+            st.caption(f"已选择：{preset_label}")
+        else:
+            ticker = st.text_input("标的代码", value=default_ticker).strip().upper() or default_ticker
         timeframe = st.selectbox(
             "观察周期",
             list(TIMEFRAME_OPTIONS),

@@ -53,9 +53,9 @@ def _is_china_a_share_code(value: str) -> bool:
 
 
 def _china_a_share_suffix(value: str) -> str:
-    if value.startswith(("6", "9")):
+    if value.startswith(("5", "6", "9")):
         return ".SS"
-    if value.startswith(("0", "2", "3")):
+    if value.startswith(("0", "1", "2", "3")):
         return ".SZ"
     if value.startswith(("4", "8")):
         return ".BJ"

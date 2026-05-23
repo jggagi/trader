@@ -22,6 +22,7 @@ def test_resolve_shanghai_a_share() -> None:
 def test_resolve_shenzhen_a_share() -> None:
     assert resolve_symbol("000001").provider_symbol == "000001.SZ"
     assert resolve_symbol("300750").provider_symbol == "300750.SZ"
+    assert resolve_symbol("159915").provider_symbol == "159915.SZ"
 
 
 def test_resolve_beijing_a_share() -> None:
@@ -37,3 +38,8 @@ def test_preserves_explicit_china_suffix() -> None:
     assert symbol.provider_symbol == "600519.SS"
     assert symbol.display_symbol == "600519.SS"
     assert symbol.currency_symbol == "¥"
+
+
+def test_resolve_shanghai_listed_etf() -> None:
+    assert resolve_symbol("510300").provider_symbol == "510300.SS"
+    assert resolve_symbol("588000").provider_symbol == "588000.SS"
