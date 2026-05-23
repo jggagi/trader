@@ -48,26 +48,30 @@ def inject_styles() -> None:
         """
         <style>
         :root {
-            --ink: #17212b;
-            --muted: #66707c;
+            --ink: #16202a;
+            --muted: #65717d;
             --panel: #ffffff;
             --line: #dfe5ea;
             --teal: #087f8c;
+            --teal-soft: #e4f5f6;
             --green: #15803d;
             --red: #b42318;
             --amber: #b7791f;
             --violet: #6d5dfc;
+            --blue: #2463eb;
         }
 
         .stApp {
             background:
-                radial-gradient(circle at top left, rgba(8, 127, 140, 0.11), transparent 32rem),
-                linear-gradient(180deg, #f7f9fb 0%, #eef3f5 100%);
+                radial-gradient(circle at top left, rgba(8, 127, 140, 0.10), transparent 30rem),
+                radial-gradient(circle at 85% 5%, rgba(36, 99, 235, 0.08), transparent 26rem),
+                linear-gradient(180deg, #f7fafb 0%, #edf2f5 100%);
             color: var(--ink);
         }
 
         [data-testid="stSidebar"] {
-            background: #101820;
+            background: linear-gradient(180deg, #101820 0%, #14212a 100%);
+            border-right: 1px solid rgba(255,255,255,0.06);
         }
 
         [data-testid="stSidebar"] * {
@@ -87,6 +91,8 @@ def inject_styles() -> None:
         [data-testid="stSidebar"] button[kind="primary"] {
             background: var(--teal);
             border-color: var(--teal);
+            border-radius: 8px;
+            font-weight: 760;
         }
 
         [data-testid="stSidebar"] button[kind="primary"]:hover {
@@ -95,9 +101,9 @@ def inject_styles() -> None:
         }
 
         .block-container {
-            padding-top: 2rem;
+            padding-top: 1.35rem;
             padding-bottom: 3rem;
-            max-width: 1240px;
+            max-width: 1280px;
         }
 
         h1, h2, h3 {
@@ -105,13 +111,22 @@ def inject_styles() -> None:
         }
 
         .app-header {
+            position: relative;
+            overflow: hidden;
             background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(236,246,247,0.94));
             border: 1px solid rgba(23, 33, 43, 0.08);
-            border-left: 6px solid var(--teal);
             border-radius: 8px;
             padding: 1rem 1.25rem;
             box-shadow: 0 18px 40px rgba(16, 24, 32, 0.08);
             margin-bottom: 1.1rem;
+        }
+
+        .app-header:before {
+            content: "";
+            position: absolute;
+            inset: 0 auto 0 0;
+            width: 6px;
+            background: linear-gradient(180deg, var(--teal), var(--blue));
         }
 
         .header-kicker {
@@ -125,7 +140,7 @@ def inject_styles() -> None:
 
         .header-row {
             display: flex;
-            align-items: end;
+            align-items: center;
             justify-content: space-between;
             gap: 1rem;
             flex-wrap: wrap;
@@ -141,6 +156,7 @@ def inject_styles() -> None:
         .app-meta {
             color: var(--muted);
             font-size: 0.95rem;
+            margin-top: 0.25rem;
         }
 
         .status-pill {
@@ -153,6 +169,7 @@ def inject_styles() -> None:
             border-radius: 999px;
             font-size: 0.82rem;
             white-space: nowrap;
+            box-shadow: 0 10px 22px rgba(23, 33, 43, 0.16);
         }
 
         .dot {
@@ -192,6 +209,10 @@ def inject_styles() -> None:
             border-radius: 8px;
             padding: 1rem 1.1rem;
             box-shadow: 0 12px 30px rgba(16, 24, 32, 0.07);
+        }
+
+        .decision-main {
+            border-top: 4px solid var(--teal);
         }
 
         .decision-label {
@@ -288,6 +309,7 @@ def inject_styles() -> None:
             border-radius: 8px;
             padding: 0.95rem;
             box-shadow: 0 10px 24px rgba(16, 24, 32, 0.06);
+            min-height: 8.4rem;
         }
 
         .insight-label {
@@ -326,6 +348,44 @@ def inject_styles() -> None:
             line-height: 1.45;
         }
 
+        .overview-band {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 18rem;
+            gap: 0.8rem;
+            align-items: stretch;
+        }
+
+        .risk-meter {
+            background: var(--panel);
+            border: 1px solid rgba(23, 33, 43, 0.08);
+            border-radius: 8px;
+            padding: 0.95rem;
+            box-shadow: 0 12px 30px rgba(16, 24, 32, 0.07);
+        }
+
+        .risk-track {
+            height: 0.6rem;
+            border-radius: 999px;
+            background: linear-gradient(90deg, var(--green), var(--amber), var(--red));
+            margin: 0.75rem 0 0.45rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .risk-track:after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, rgba(255,255,255,0.55), transparent);
+        }
+
+        .risk-label-row {
+            display: flex;
+            justify-content: space-between;
+            color: var(--muted);
+            font-size: 0.74rem;
+        }
+
         .metric-card {
             background: var(--panel);
             border: 1px solid rgba(23, 33, 43, 0.08);
@@ -333,6 +393,16 @@ def inject_styles() -> None:
             padding: 0.78rem 0.85rem;
             box-shadow: 0 12px 30px rgba(16, 24, 32, 0.07);
             min-width: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-card:before {
+            content: "";
+            position: absolute;
+            inset: 0 0 auto 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--teal), var(--blue));
         }
 
         .metric-label {
@@ -344,10 +414,52 @@ def inject_styles() -> None:
 
         .metric-value {
             color: var(--ink);
-            font-size: 1.12rem;
+            font-size: 1.16rem;
             font-weight: 760;
             line-height: 1.15;
             overflow-wrap: anywhere;
+        }
+
+        .etf-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+            gap: 0.55rem;
+        }
+
+        .etf-card {
+            background: rgba(255,255,255,0.94);
+            border: 1px solid rgba(23, 33, 43, 0.08);
+            border-radius: 8px;
+            padding: 0.72rem;
+        }
+
+        .etf-symbol {
+            color: var(--ink);
+            font-size: 1rem;
+            font-weight: 800;
+        }
+
+        .etf-name {
+            color: var(--muted);
+            font-size: 0.82rem;
+            line-height: 1.35;
+            margin-top: 0.15rem;
+        }
+
+        .tag-row {
+            display: flex;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+            margin-top: 0.55rem;
+        }
+
+        .tag {
+            border-radius: 999px;
+            padding: 0.18rem 0.45rem;
+            background: var(--teal-soft);
+            color: var(--teal);
+            font-size: 0.7rem;
+            font-weight: 720;
         }
 
         .news-grid {
@@ -364,6 +476,11 @@ def inject_styles() -> None:
             padding: 0.95rem;
             min-height: 9rem;
             box-shadow: 0 10px 24px rgba(16, 24, 32, 0.06);
+        }
+
+        .news-card:hover, .etf-card:hover, .insight-card:hover {
+            border-color: rgba(8, 127, 140, 0.28);
+            box-shadow: 0 14px 30px rgba(16, 24, 32, 0.09);
         }
 
         .news-source, .critique-name {
@@ -403,7 +520,7 @@ def inject_styles() -> None:
 
         .stTabs [data-baseweb="tab-list"] {
             gap: 0.35rem;
-            background: rgba(255,255,255,0.68);
+            background: rgba(255,255,255,0.72);
             border: 1px solid rgba(23, 33, 43, 0.08);
             border-radius: 8px;
             padding: 0.35rem;
@@ -433,6 +550,9 @@ def inject_styles() -> None:
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
             .decision-panel {
+                grid-template-columns: 1fr;
+            }
+            .overview-band {
                 grid-template-columns: 1fr;
             }
         }
@@ -807,20 +927,42 @@ def render_etf_catalog_preview(presets) -> None:
     if not presets:
         st.info("当前筛选下没有 ETF。")
         return
-    preview = pd.DataFrame(
-        [
-            {
-                "代码": item.symbol,
-                "名称": item.name,
-                "市场": item.market,
-                "风格": item.style,
-                "主题": item.theme,
-                "说明": item.note,
-            }
-            for item in presets
-        ]
+    cards = []
+    for item in presets:
+        tags = "".join(
+            f'<span class="tag">{html.escape(tag)}</span>'
+            for tag in (item.market, item.style, item.theme)
+        )
+        cards.append(
+            '<div class="etf-card">'
+            f'<div class="etf-symbol">{html.escape(item.symbol)}</div>'
+            f'<div class="etf-name">{html.escape(item.name)}</div>'
+            f'<div class="tag-row">{tags}</div>'
+            f'<div class="insight-detail" style="margin-top:0.55rem;">{html.escape(item.note)}</div>'
+            "</div>"
+        )
+    st.markdown(
+        f'<div class="etf-card-grid">{"".join(cards)}</div>',
+        unsafe_allow_html=True,
     )
-    st.dataframe(preview, hide_index=True, use_container_width=True)
+
+
+def render_overview_risk_panel(technical: dict, risk: dict) -> None:
+    st.markdown(
+        f"""
+        <div class="risk-meter">
+            <div class="decision-label">趋势 / 风险雷达</div>
+            <div class="insight-value">{html.escape(technical["trend_label"])}</div>
+            <div class="insight-detail">{html.escape(technical["trend_detail"])}</div>
+            <div class="risk-track"></div>
+            <div class="risk-label-row"><span>温和</span><span>中等</span><span>偏高</span></div>
+            <div class="insight-detail" style="margin-top:0.75rem;">
+                {html.escape(risk["risk_label"])} · 最大回撤 {html.escape(format_optional_pct(risk["max_drawdown"]))}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def main() -> None:
@@ -941,10 +1083,13 @@ def main() -> None:
         if price_frame.empty:
             st.warning("没有拉取到价格数据。可以换一个数据源或稍后重试。")
         else:
-            with st.container():
+            chart_col, risk_col = st.columns([3.4, 1.1])
+            with chart_col:
                 st.markdown('<div class="section-card">', unsafe_allow_html=True)
                 render_price_chart(price_frame)
                 st.markdown("</div>", unsafe_allow_html=True)
+            with risk_col:
+                render_overview_risk_panel(technical, risk)
         st.subheader("最近新闻线索")
         render_mini_news(snapshot["news"])
 
