@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: qqq-trader
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.address 0.0.0.0 --server.port $PORT
+    envVars:
+      - key: APP_MODE
+        value: cloud
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini
+

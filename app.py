@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import os
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -440,15 +441,24 @@ def inject_styles() -> None:
 
 @st.cache_data(ttl=900, show_spinner=False)
 def load_market_snapshot(provider: str, ticker: str, timeframe: str) -> dict:
-    fetcher = create_market_data_fetcher(DataProvider(provider))
-    prices = fetcher.get_historical_prices(ticker=ticker, timeframe=timeframe)
-    news = fetcher.get_recent_news(ticker=ticker)
+    errors: list[str] = []
+    try:
+        fetcher = create_market_data_fetcher(DataProvider(provider))
+        prices = fetcher.get_historical_prices(ticker=ticker, timeframe=timeframe)
+        news = fetcher.get_recent_news(ticker=ticker)
+    except Exception as exc:
+        errors.append(f"{provider} 数据拉取失败，已切换到离线演示数据：{exc}")
+        fallback = create_market_data_fetcher(DataProvider.GOOGLE_MOCK)
+        prices = fallback.get_historical_prices(ticker=ticker, timeframe=timeframe)
+        news = fallback.get_recent_news(ticker=ticker)
+        provider = DataProvider.GOOGLE_MOCK.value
     return {
         "provider": provider,
         "ticker": ticker.upper(),
         "timeframe": timeframe,
         "prices": [point.model_dump() for point in prices],
         "news": [item.model_dump() for item in news],
+        "errors": errors,
     }
 
 
@@ -628,6 +638,27 @@ def render_header(snapshot: dict, metrics: dict, llm_available: bool) -> None:
     )
 
 
+def render_runtime_notice() -> None:
+    if os.getenv("APP_MODE", "local").lower() != "cloud":
+        return
+    st.info(
+        "当前运行在公网部署模式。请不要上传或粘贴券商 PDF、账户截图、身份证明、API key "
+        "或任何真实个人组合明细。这个版本只适合展示公开行情分析。"
+    )
+
+
+def configure_streamlit_secrets() -> None:
+    try:
+        secrets = st.secrets
+    except Exception:
+        return
+
+    for key in ("OPENAI_API_KEY", "OPENAI_MODEL", "APP_MODE"):
+        value = secrets.get(key)
+        if value and not os.getenv(key):
+            os.environ[key] = str(value)
+
+
 def render_metrics(metrics: dict) -> None:
     metric_items = [
         ("标的", metrics["ticker"]),
@@ -761,6 +792,7 @@ def render_investment_dashboard(technical: dict, risk: dict, checklist: list[str
 
 def main() -> None:
     inject_styles()
+    configure_streamlit_secrets()
 
     with st.sidebar:
         st.header("分析设置")
@@ -822,6 +854,9 @@ def main() -> None:
     )
 
     render_header(snapshot, metrics, llm_available=llm_client.__class__.__name__ != "LocalFallbackLLMClient")
+    render_runtime_notice()
+    for error in snapshot.get("errors", []):
+        st.warning(error)
     render_takeaway_panel(takeaway)
     render_metrics(metrics)
 
