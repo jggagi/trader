@@ -18,8 +18,8 @@ A modular Streamlit app for QQQ market attribution, local investment dashboards,
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
-streamlit run app.py
+make setup
+make run
 ```
 
 LLM calls are optional. Without `OPENAI_API_KEY`, the app returns deterministic local placeholder analysis so the local workflow remains usable.
@@ -32,9 +32,10 @@ export OPENAI_MODEL="gpt-4o-mini"
 For development tests:
 
 ```bash
-pip install -e ".[dev]"
-pytest
+make check
 ```
+
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for the full local to GitHub to cloud workflow.
 
 ## Deploy For Free
 
@@ -58,6 +59,8 @@ Alternative path: Render free web service.
 
 - This repo includes `render.yaml`.
 - Render free services can spin down when idle, so first load may be slower.
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for deployment details.
 
 ## Security Notes
 
