@@ -21,6 +21,7 @@ from trader.analysis_layer.insights import (
 )
 from trader.data_layer.etf_catalog import get_markets, get_presets, get_styles
 from trader.data_layer.factory import DataProvider, create_market_data_fetcher
+from trader.data_layer.master_holdings import MASTER_PORTFOLIOS, get_master_names, get_master_portfolio
 from trader.data_layer.symbols import resolve_symbol
 from trader.state_layer.parser import LocalDocumentParser
 
@@ -426,6 +427,43 @@ def inject_styles() -> None:
             gap: 0.55rem;
         }
 
+        .master-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 0.95rem;
+        }
+
+        .master-card {
+            background: rgba(255,255,255,0.94);
+            border: 1px solid rgba(23, 33, 43, 0.08);
+            border-radius: 8px;
+            padding: 0.9rem;
+            box-shadow: 0 10px 24px rgba(16, 24, 32, 0.06);
+            min-height: 9rem;
+        }
+
+        .master-name {
+            color: var(--ink);
+            font-size: 1.05rem;
+            font-weight: 820;
+        }
+
+        .master-entity {
+            color: var(--muted);
+            font-size: 0.82rem;
+            margin-top: 0.2rem;
+        }
+
+        .source-link {
+            display: inline-flex;
+            margin-top: 0.65rem;
+            color: var(--teal);
+            font-size: 0.82rem;
+            font-weight: 760;
+            text-decoration: none;
+        }
+
         .etf-card {
             background: rgba(255,255,255,0.94);
             border: 1px solid rgba(23, 33, 43, 0.08);
@@ -478,7 +516,7 @@ def inject_styles() -> None:
             box-shadow: 0 10px 24px rgba(16, 24, 32, 0.06);
         }
 
-        .news-card:hover, .etf-card:hover, .insight-card:hover {
+        .news-card:hover, .etf-card:hover, .insight-card:hover, .master-card:hover {
             border-color: rgba(8, 127, 140, 0.28);
             box-shadow: 0 14px 30px rgba(16, 24, 32, 0.09);
         }
@@ -965,6 +1003,57 @@ def render_overview_risk_panel(technical: dict, risk: dict) -> None:
     )
 
 
+def render_master_cards() -> None:
+    cards = []
+    for portfolio in MASTER_PORTFOLIOS:
+        tags = "".join(
+            f'<span class="tag">{html.escape(tag)}</span>'
+            for tag in (portfolio.style, portfolio.report_period)
+        )
+        cards.append(
+            '<div class="master-card">'
+            f'<div class="master-name">{html.escape(portfolio.master)}</div>'
+            f'<div class="master-entity">{html.escape(portfolio.entity)}</div>'
+            f'<div class="tag-row">{tags}</div>'
+            f'<div class="insight-detail" style="margin-top:0.55rem;">{html.escape(portfolio.learn)}</div>'
+            f'<a class="source-link" href="{html.escape(portfolio.source_url)}" target="_blank">{html.escape(portfolio.source_label)}</a>'
+            "</div>"
+        )
+    st.markdown(f'<div class="master-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+
+
+def render_master_holdings() -> None:
+    st.info(
+        "大师持仓来自公开披露，通常有季度滞后，只适合学习风格和研究线索，不适合作为实时跟单依据。"
+    )
+    render_master_cards()
+
+    selected_master = st.selectbox("查看大师", get_master_names(), index=0)
+    portfolio = get_master_portfolio(selected_master)
+    st.subheader(f"{portfolio.master} · {portfolio.entity}")
+
+    meta_cols = st.columns(4)
+    meta_cols[0].metric("风格", portfolio.style)
+    meta_cols[1].metric("报告期", portfolio.report_period)
+    meta_cols[2].metric("披露日期", portfolio.filed_date)
+    meta_cols[3].metric("组合规模", portfolio.portfolio_value)
+
+    holdings_frame = pd.DataFrame(
+        [
+            {
+                "代码": item.symbol,
+                "名称": item.name,
+                "权重/位置": item.weight,
+                "学习线索": item.note,
+            }
+            for item in portfolio.holdings
+        ]
+    )
+    st.dataframe(holdings_frame, hide_index=True, use_container_width=True)
+    st.warning(portfolio.caveat)
+    st.link_button("打开公开来源", portfolio.source_url, use_container_width=True)
+
+
 def main() -> None:
     inject_styles()
     configure_streamlit_secrets()
@@ -1075,8 +1164,8 @@ def main() -> None:
     render_takeaway_panel(takeaway)
     render_metrics(metrics)
 
-    overview_tab, dashboard_tab, news_tab, attribution_tab, critique_tab, data_tab = st.tabs(
-        ["总览", "投资仪表盘", "新闻", "归因", "大师批判", "原始数据"]
+    overview_tab, dashboard_tab, masters_tab, news_tab, attribution_tab, critique_tab, data_tab = st.tabs(
+        ["总览", "投资仪表盘", "大师持仓", "新闻", "归因", "大师批判", "原始数据"]
     )
 
     with overview_tab:
@@ -1104,6 +1193,9 @@ def main() -> None:
             mime="text/markdown",
             use_container_width=True,
         )
+
+    with masters_tab:
+        render_master_holdings()
 
     with news_tab:
         render_news_cards(snapshot["news"])

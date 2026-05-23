@@ -13,6 +13,7 @@ A modular Streamlit app for market attribution, local investment dashboards, ris
 - Risk snapshot with volatility and max drawdown
 - Position scenario table and Markdown report export
 - Filterable ETF catalog for common large-cap, technology, growth, low-volatility, and dividend ETFs in US and China A-share markets
+- Master holdings study view for selected public 13F-style portfolios
 
 ## Run Locally
 
