@@ -21,7 +21,12 @@ from trader.analysis_layer.insights import (
 )
 from trader.data_layer.etf_catalog import get_markets, get_presets, get_styles
 from trader.data_layer.factory import DataProvider, create_market_data_fetcher
-from trader.data_layer.master_holdings import MASTER_PORTFOLIOS, get_master_names, get_master_portfolio
+from trader.data_layer.master_holdings import (
+    MASTER_PORTFOLIOS,
+    get_consensus_holdings,
+    get_master_names,
+    get_master_portfolio,
+)
 from trader.data_layer.symbols import resolve_symbol
 from trader.state_layer.parser import LocalDocumentParser
 
@@ -464,6 +469,67 @@ def inject_styles() -> None:
             text-decoration: none;
         }
 
+        .consensus-hero {
+            background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(228,245,246,0.92));
+            border: 1px solid rgba(23, 33, 43, 0.08);
+            border-radius: 8px;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 18px 40px rgba(16, 24, 32, 0.08);
+            margin-bottom: 1rem;
+        }
+
+        .consensus-title {
+            color: var(--ink);
+            font-size: 1.35rem;
+            font-weight: 840;
+            line-height: 1.15;
+        }
+
+        .consensus-subtitle {
+            color: var(--muted);
+            font-size: 0.92rem;
+            margin-top: 0.3rem;
+            line-height: 1.45;
+        }
+
+        .consensus-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.72rem;
+            margin: 0.8rem 0 1rem;
+        }
+
+        .consensus-card {
+            background: rgba(255,255,255,0.96);
+            border: 1px solid rgba(23, 33, 43, 0.08);
+            border-radius: 8px;
+            padding: 0.82rem;
+            box-shadow: 0 10px 24px rgba(16, 24, 32, 0.06);
+            min-height: 8.25rem;
+        }
+
+        .consensus-rank {
+            color: var(--teal);
+            font-size: 0.72rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .consensus-symbol {
+            color: var(--ink);
+            font-size: 1.22rem;
+            font-weight: 840;
+            margin-top: 0.18rem;
+        }
+
+        .consensus-meta {
+            color: var(--muted);
+            font-size: 0.78rem;
+            line-height: 1.35;
+            margin-top: 0.35rem;
+        }
+
         .etf-card {
             background: rgba(255,255,255,0.94);
             border: 1px solid rgba(23, 33, 43, 0.08);
@@ -516,7 +582,7 @@ def inject_styles() -> None:
             box-shadow: 0 10px 24px rgba(16, 24, 32, 0.06);
         }
 
-        .news-card:hover, .etf-card:hover, .insight-card:hover, .master-card:hover {
+        .news-card:hover, .etf-card:hover, .insight-card:hover, .master-card:hover, .consensus-card:hover {
             border-color: rgba(8, 127, 140, 0.28);
             box-shadow: 0 14px 30px rgba(16, 24, 32, 0.09);
         }
@@ -1022,10 +1088,91 @@ def render_master_cards() -> None:
     st.markdown(f'<div class="master-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
 
 
+def render_consensus_holdings() -> None:
+    consensus = get_consensus_holdings()
+    if not consensus:
+        return
+
+    top = consensus[:6]
+    st.markdown(
+        """
+        <div class="consensus-hero">
+            <div class="consensus-title">大师共识塔</div>
+            <div class="consensus-subtitle">
+                从公开披露持仓中提取被多位投资大师共同持有或反复出现的标的。
+                这不是买入建议，而是一个更快进入研究状态的候选清单。
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    figure = go.Figure(
+        go.Funnel(
+            y=[f"{item.symbol} · {item.name}" for item in top],
+            x=[item.score for item in top],
+            text=[
+                f"{item.conviction_label} · {item.holder_count} 位大师 · {', '.join(item.masters)}"
+                for item in top
+            ],
+            textposition="inside",
+            marker={
+                "color": ["#087f8c", "#2463eb", "#15803d", "#6d5dfc", "#b7791f", "#65717d"][: len(top)],
+                "line": {"width": 1, "color": "rgba(255,255,255,0.85)"},
+            },
+            connector={"line": {"color": "rgba(22,32,42,0.18)", "dash": "solid", "width": 1}},
+            hovertemplate="<b>%{y}</b><br>%{text}<br>共识分: %{x}<extra></extra>",
+        )
+    )
+    figure.update_layout(
+        height=360,
+        margin={"l": 10, "r": 10, "t": 4, "b": 8},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font={"color": "#16202a", "family": "Inter, -apple-system, BlinkMacSystemFont, sans-serif"},
+    )
+    st.plotly_chart(figure, use_container_width=True)
+
+    cards = []
+    for index, item in enumerate(top, start=1):
+        tags = "".join(
+            f'<span class="tag">{html.escape(tag)}</span>'
+            for tag in (item.conviction_label, f"{item.holder_count} 位大师")
+        )
+        cards.append(
+            '<div class="consensus-card">'
+            f'<div class="consensus-rank">Consensus #{index}</div>'
+            f'<div class="consensus-symbol">{html.escape(item.symbol)} · {html.escape(item.name)}</div>'
+            f'<div class="tag-row">{tags}</div>'
+            f'<div class="consensus-meta">持有者：{html.escape(", ".join(item.masters))}</div>'
+            f'<div class="consensus-meta">研究线索：{html.escape(item.note)}</div>'
+            "</div>"
+        )
+    st.markdown(f'<div class="consensus-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+
+    consensus_frame = pd.DataFrame(
+        [
+            {
+                "代码": item.symbol,
+                "名称": item.name,
+                "共识等级": item.conviction_label,
+                "大师人数": item.holder_count,
+                "大师": ", ".join(item.masters),
+                "主题": " / ".join(item.themes),
+                "共识分": item.score,
+            }
+            for item in consensus
+        ]
+    )
+    with st.expander("查看完整共识清单与计算结果", expanded=False):
+        st.dataframe(consensus_frame, hide_index=True, use_container_width=True)
+
+
 def render_master_holdings() -> None:
     st.info(
         "大师持仓来自公开披露，通常有季度滞后，只适合学习风格和研究线索，不适合作为实时跟单依据。"
     )
+    render_consensus_holdings()
     render_master_cards()
 
     selected_master = st.selectbox("查看大师", get_master_names(), index=0)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections import defaultdict
 
 
 @dataclass(frozen=True)
@@ -24,6 +25,18 @@ class MasterPortfolio:
     caveat: str
     learn: str
     holdings: list[MasterHolding]
+
+
+@dataclass(frozen=True)
+class ConsensusHolding:
+    symbol: str
+    name: str
+    holder_count: int
+    masters: list[str]
+    themes: list[str]
+    conviction_label: str
+    score: float
+    note: str
 
 
 MASTER_PORTFOLIOS = [
@@ -133,3 +146,65 @@ def get_master_portfolio(name: str) -> MasterPortfolio:
         if portfolio.master == name:
             return portfolio
     return MASTER_PORTFOLIOS[0]
+
+
+CANONICAL_SYMBOLS = {
+    "GOOG": "GOOGL",
+}
+
+
+def _canonical_symbol(symbol: str) -> str:
+    return CANONICAL_SYMBOLS.get(symbol, symbol)
+
+
+def _weight_score(weight: str) -> float:
+    if "%" in weight:
+        try:
+            return min(float(weight.replace("%", "").strip()), 25.0) / 25.0
+        except ValueError:
+            return 0.45
+    if "最大" in weight:
+        return 1.0
+    if "前列" in weight or "前" in weight:
+        return 0.72
+    return 0.5
+
+
+def get_consensus_holdings(min_holders: int = 2) -> list[ConsensusHolding]:
+    grouped: dict[str, list[tuple[MasterPortfolio, MasterHolding]]] = defaultdict(list)
+    for portfolio in MASTER_PORTFOLIOS:
+        for holding in portfolio.holdings:
+            grouped[_canonical_symbol(holding.symbol)].append((portfolio, holding))
+
+    consensus: list[ConsensusHolding] = []
+    for symbol, entries in grouped.items():
+        masters = sorted({portfolio.master for portfolio, _ in entries})
+        if len(masters) < min_holders:
+            continue
+
+        first_holding = entries[0][1]
+        names = [holding.name for _, holding in entries if holding.symbol == symbol]
+        name = names[0] if names else first_holding.name
+        themes = sorted({holding.note for _, holding in entries})
+        average_weight_score = sum(_weight_score(holding.weight) for _, holding in entries) / len(entries)
+        score = round(len(masters) * 20 + average_weight_score * 40, 1)
+        if len(masters) >= 3:
+            conviction_label = "高共识"
+        elif average_weight_score >= 0.75:
+            conviction_label = "强线索"
+        else:
+            conviction_label = "交叉验证"
+        consensus.append(
+            ConsensusHolding(
+                symbol=symbol,
+                name=name,
+                holder_count=len(masters),
+                masters=masters,
+                themes=themes,
+                conviction_label=conviction_label,
+                score=score,
+                note=" / ".join(themes[:2]),
+            )
+        )
+
+    return sorted(consensus, key=lambda item: (item.holder_count, item.score, item.symbol), reverse=True)
