@@ -1059,60 +1059,72 @@ def main() -> None:
     configure_streamlit_secrets()
 
     with st.sidebar:
-        st.header("分析设置")
-        st.caption("输入美股/ETF 代码，或 A 股 6 位代码。例：SPY、AAPL、600519、000001。")
-        default_ticker = get_default_ticker()
-        market_filter = st.selectbox(
-            "ETF 市场",
-            get_markets(),
-            index=0,
-            help="先按市场缩小范围。",
-        )
-        style_filter = st.selectbox(
-            "ETF 风格",
-            get_styles(market_filter),
-            index=0,
-            help="按你的偏好筛选大盘、科技成长、成长、低波红利等风格。",
-        )
-        filtered_presets = get_presets(market_filter, style_filter)
-        selected_preset = st.selectbox(
-            "ETF 快捷选择",
-            [None, *filtered_presets],
-            format_func=lambda item: "自定义输入" if item is None else item.label,
-            help="这些只是常见 ETF 快捷入口，不构成投资建议。",
-        )
-        if selected_preset:
-            ticker = selected_preset.symbol
-            st.caption(f"{selected_preset.market} · {selected_preset.style} · {selected_preset.theme} · {selected_preset.note}")
+        st.header("导航")
+        page = st.radio("页面", ["市场分析", "大师持仓"], horizontal=True)
+        st.divider()
+
+        if page == "大师持仓":
+            st.caption("独立学习区：查看公开披露持仓，不依赖当前股票或 ETF。")
+            st.caption("这些数据有披露滞后，只适合学习，不适合实时跟单。")
         else:
-            ticker = st.text_input("标的代码", value=default_ticker).strip().upper() or default_ticker
-        with st.expander("查看当前 ETF 列表", expanded=False):
-            render_etf_catalog_preview(filtered_presets)
-        timeframe = st.selectbox(
-            "观察周期",
-            list(TIMEFRAME_OPTIONS),
-            index=1,
-            format_func=lambda value: TIMEFRAME_OPTIONS[value],
-        )
-        provider = st.selectbox(
-            "数据源",
-            [DataProvider.YAHOO.value, DataProvider.GOOGLE_MOCK.value],
-            index=0,
-            format_func=lambda value: f"{value} · {PROVIDER_HELP[value]}",
-        )
-        st.divider()
-        st.subheader("我的情景推演")
-        position_value = st.number_input(
-            f"{ticker} 持仓市值（本币）",
-            min_value=0.0,
-            value=0.0,
-            step=1000.0,
-            help="只在本地用于估算情景影响，不会上传。",
-        )
-        shock_pct = st.slider("压力/乐观情景幅度", min_value=3, max_value=25, value=10, step=1)
-        run_analysis = st.button("刷新分析", type="primary", use_container_width=True)
-        st.divider()
-        st.caption("组合文件解析仍是本地占位功能，不会上传你的个人文件。")
+            st.header("分析设置")
+            st.caption("输入美股/ETF 代码，或 A 股 6 位代码。例：SPY、AAPL、600519、000001。")
+            default_ticker = get_default_ticker()
+            market_filter = st.selectbox(
+                "ETF 市场",
+                get_markets(),
+                index=0,
+                help="先按市场缩小范围。",
+            )
+            style_filter = st.selectbox(
+                "ETF 风格",
+                get_styles(market_filter),
+                index=0,
+                help="按你的偏好筛选大盘、科技成长、成长、低波红利等风格。",
+            )
+            filtered_presets = get_presets(market_filter, style_filter)
+            selected_preset = st.selectbox(
+                "ETF 快捷选择",
+                [None, *filtered_presets],
+                format_func=lambda item: "自定义输入" if item is None else item.label,
+                help="这些只是常见 ETF 快捷入口，不构成投资建议。",
+            )
+            if selected_preset:
+                ticker = selected_preset.symbol
+                st.caption(f"{selected_preset.market} · {selected_preset.style} · {selected_preset.theme} · {selected_preset.note}")
+            else:
+                ticker = st.text_input("标的代码", value=default_ticker).strip().upper() or default_ticker
+            with st.expander("查看当前 ETF 列表", expanded=False):
+                render_etf_catalog_preview(filtered_presets)
+            timeframe = st.selectbox(
+                "观察周期",
+                list(TIMEFRAME_OPTIONS),
+                index=1,
+                format_func=lambda value: TIMEFRAME_OPTIONS[value],
+            )
+            provider = st.selectbox(
+                "数据源",
+                [DataProvider.YAHOO.value, DataProvider.GOOGLE_MOCK.value],
+                index=0,
+                format_func=lambda value: f"{value} · {PROVIDER_HELP[value]}",
+            )
+            st.divider()
+            st.subheader("我的情景推演")
+            position_value = st.number_input(
+                f"{ticker} 持仓市值（本币）",
+                min_value=0.0,
+                value=0.0,
+                step=1000.0,
+                help="只在本地用于估算情景影响，不会上传。",
+            )
+            shock_pct = st.slider("压力/乐观情景幅度", min_value=3, max_value=25, value=10, step=1)
+            run_analysis = st.button("刷新分析", type="primary", use_container_width=True)
+            st.divider()
+            st.caption("组合文件解析仍是本地占位功能，不会上传你的个人文件。")
+
+    if page == "大师持仓":
+        render_master_holdings()
+        return
 
     needs_snapshot = "snapshot" not in st.session_state or "provider_symbol" not in st.session_state.get("snapshot", {})
     if needs_snapshot or run_analysis:
@@ -1164,8 +1176,8 @@ def main() -> None:
     render_takeaway_panel(takeaway)
     render_metrics(metrics)
 
-    overview_tab, dashboard_tab, masters_tab, news_tab, attribution_tab, critique_tab, data_tab = st.tabs(
-        ["总览", "投资仪表盘", "大师持仓", "新闻", "归因", "大师批判", "原始数据"]
+    overview_tab, dashboard_tab, news_tab, attribution_tab, critique_tab, data_tab = st.tabs(
+        ["总览", "投资仪表盘", "新闻", "归因", "大师批判", "原始数据"]
     )
 
     with overview_tab:
@@ -1193,9 +1205,6 @@ def main() -> None:
             mime="text/markdown",
             use_container_width=True,
         )
-
-    with masters_tab:
-        render_master_holdings()
 
     with news_tab:
         render_news_cards(snapshot["news"])
