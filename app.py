@@ -10,11 +10,33 @@ import streamlit as st
 from trader.agent_layer.attribution.engine import AttributionEngine
 from trader.agent_layer.critique.engine import MasterCritiqueEngine
 from trader.agent_layer.llm import build_default_llm_client
+from trader.analysis_layer.insights import (
+    build_action_checklist,
+    build_markdown_report,
+    build_risk_snapshot,
+    build_scenario_table,
+    build_technical_snapshot,
+    enrich_price_frame,
+)
 from trader.data_layer.factory import DataProvider, create_market_data_fetcher
 from trader.state_layer.parser import LocalDocumentParser
 
 
 st.set_page_config(page_title="QQQ Attribution", page_icon="QQQ", layout="wide")
+
+
+TIMEFRAME_OPTIONS = {
+    "5d": "5天",
+    "1mo": "1个月",
+    "3mo": "3个月",
+    "6mo": "6个月",
+    "1y": "1年",
+}
+
+PROVIDER_HELP = {
+    DataProvider.YAHOO.value: "真实行情与新闻",
+    DataProvider.GOOGLE_MOCK.value: "离线演示数据",
+}
 
 
 def inject_styles() -> None:
@@ -153,6 +175,153 @@ def inject_styles() -> None:
             margin: 0.8rem 0 0.8rem;
         }
 
+        .decision-panel {
+            display: grid;
+            grid-template-columns: 1.35fr 0.65fr;
+            gap: 0.85rem;
+            margin: 0.75rem 0 0.95rem;
+        }
+
+        .decision-main, .decision-side {
+            background: var(--panel);
+            border: 1px solid rgba(23, 33, 43, 0.08);
+            border-radius: 8px;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 12px 30px rgba(16, 24, 32, 0.07);
+        }
+
+        .decision-label {
+            color: var(--teal);
+            font-size: 0.76rem;
+            font-weight: 740;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 0.35rem;
+        }
+
+        .decision-title {
+            color: var(--ink);
+            font-size: 1.2rem;
+            font-weight: 780;
+            line-height: 1.28;
+            margin-bottom: 0.4rem;
+        }
+
+        .decision-copy {
+            color: var(--muted);
+            font-size: 0.94rem;
+            line-height: 1.5;
+        }
+
+        .step-list {
+            display: grid;
+            gap: 0.5rem;
+            margin-top: 0.55rem;
+        }
+
+        .step-item {
+            display: flex;
+            gap: 0.5rem;
+            align-items: start;
+            color: var(--muted);
+            font-size: 0.9rem;
+            line-height: 1.38;
+        }
+
+        .step-number {
+            width: 1.25rem;
+            height: 1.25rem;
+            flex: 0 0 1.25rem;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(8, 127, 140, 0.12);
+            color: var(--teal);
+            font-size: 0.74rem;
+            font-weight: 760;
+        }
+
+        .mini-news {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 0.65rem;
+            margin-top: 0.65rem;
+        }
+
+        .mini-news-item {
+            background: rgba(255,255,255,0.82);
+            border: 1px solid rgba(23, 33, 43, 0.08);
+            border-radius: 8px;
+            padding: 0.78rem;
+        }
+
+        .mini-news-source {
+            color: var(--teal);
+            font-size: 0.72rem;
+            font-weight: 720;
+            text-transform: uppercase;
+            margin-bottom: 0.3rem;
+        }
+
+        .mini-news-title {
+            color: var(--ink);
+            font-size: 0.9rem;
+            font-weight: 660;
+            line-height: 1.34;
+        }
+
+        .insight-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 0.75rem;
+            margin: 0.75rem 0 1rem;
+        }
+
+        .insight-card {
+            background: var(--panel);
+            border: 1px solid rgba(23, 33, 43, 0.08);
+            border-radius: 8px;
+            padding: 0.95rem;
+            box-shadow: 0 10px 24px rgba(16, 24, 32, 0.06);
+        }
+
+        .insight-label {
+            color: var(--muted);
+            font-size: 0.74rem;
+            font-weight: 700;
+            margin-bottom: 0.35rem;
+        }
+
+        .insight-value {
+            color: var(--ink);
+            font-size: 1.08rem;
+            font-weight: 780;
+            margin-bottom: 0.45rem;
+        }
+
+        .insight-detail {
+            color: var(--muted);
+            font-size: 0.9rem;
+            line-height: 1.45;
+        }
+
+        .checklist {
+            display: grid;
+            gap: 0.55rem;
+            margin-top: 0.75rem;
+        }
+
+        .check-item {
+            background: rgba(255,255,255,0.86);
+            border: 1px solid rgba(23, 33, 43, 0.08);
+            border-radius: 8px;
+            padding: 0.78rem 0.85rem;
+            color: var(--ink);
+            font-size: 0.93rem;
+            line-height: 1.45;
+        }
+
         .metric-card {
             background: var(--panel);
             border: 1px solid rgba(23, 33, 43, 0.08);
@@ -259,6 +428,9 @@ def inject_styles() -> None:
             .metric-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
+            .decision-panel {
+                grid-template-columns: 1fr;
+            }
         }
         </style>
         """,
@@ -288,11 +460,20 @@ def build_price_frame(snapshot: dict) -> pd.DataFrame:
     return frame.sort_values("date")
 
 
+def format_optional_pct(value: float | None) -> str:
+    if value is None:
+        return "N/A"
+    return f"{value:+.2f}%"
+
+
 def compute_market_metrics(frame: pd.DataFrame, news_count: int, ticker: str) -> dict:
     if frame.empty:
         return {
             "ticker": ticker,
             "last_close": "N/A",
+            "first_close": None,
+            "last_close_raw": None,
+            "move_pct_raw": None,
             "move_pct": "N/A",
             "range": "N/A",
             "news_count": str(news_count),
@@ -306,13 +487,52 @@ def compute_market_metrics(frame: pd.DataFrame, news_count: int, ticker: str) ->
     return {
         "ticker": ticker,
         "last_close": f"${last_close:,.2f}",
+        "first_close": first_close,
+        "last_close_raw": last_close,
+        "move_pct_raw": move_pct,
         "move_pct": f"{move_pct:+.2f}%",
         "range": f"${low:,.2f} - ${high:,.2f}",
         "news_count": str(news_count),
     }
 
 
+def build_plain_language_takeaway(metrics: dict, timeframe: str, news: list[dict]) -> dict:
+    move_pct = metrics.get("move_pct_raw")
+    readable_timeframe = TIMEFRAME_OPTIONS.get(timeframe, timeframe)
+    news_count = len(news)
+
+    if move_pct is None:
+        return {
+            "title": "暂时没有足够行情数据",
+            "body": "可以先切换到 Google Finance Mock 验证界面流程，或稍后重新拉取 Yahoo Finance 数据。",
+            "tone": "数据不足",
+        }
+
+    if move_pct >= 5:
+        title = f"过去{readable_timeframe}明显走强，先看是否由少数大科技股和宏观预期共同推动。"
+        tone = "偏强"
+    elif move_pct >= 1:
+        title = f"过去{readable_timeframe}温和上涨，适合重点核对新闻催化和成交量是否配合。"
+        tone = "温和偏强"
+    elif move_pct <= -5:
+        title = f"过去{readable_timeframe}明显回撤，先排查利率、通胀、财报或风险偏好变化。"
+        tone = "偏弱"
+    elif move_pct <= -1:
+        title = f"过去{readable_timeframe}小幅走弱，重点看下跌是否有明确新闻解释。"
+        tone = "温和偏弱"
+    else:
+        title = f"过去{readable_timeframe}波动不大，短期信号不强，适合等待更清晰的催化。"
+        tone = "中性"
+
+    body = (
+        f"当前已拉取 {news_count} 条新闻。建议先读“总览”，再进入“归因”和“大师批判”："
+        "前者解释发生了什么，后者帮助你避免只看价格而忽略商业质量、机会成本和宏观周期。"
+    )
+    return {"title": title, "body": body, "tone": tone}
+
+
 def render_price_chart(frame: pd.DataFrame) -> None:
+    chart_frame = enrich_price_frame(frame)
     fig = make_subplots(
         rows=2,
         cols=1,
@@ -322,11 +542,11 @@ def render_price_chart(frame: pd.DataFrame) -> None:
     )
     fig.add_trace(
         go.Candlestick(
-            x=frame["date"],
-            open=frame["open"],
-            high=frame["high"],
-            low=frame["low"],
-            close=frame["close"],
+            x=chart_frame["date"],
+            open=chart_frame["open"],
+            high=chart_frame["high"],
+            low=chart_frame["low"],
+            close=chart_frame["close"],
             name="OHLC",
             increasing_line_color="#15803d",
             increasing_fillcolor="rgba(21, 128, 61, 0.55)",
@@ -336,10 +556,34 @@ def render_price_chart(frame: pd.DataFrame) -> None:
         row=1,
         col=1,
     )
+    if "ma20" in chart_frame:
+        fig.add_trace(
+            go.Scatter(
+                x=chart_frame["date"],
+                y=chart_frame["ma20"],
+                mode="lines",
+                line=dict(color="#b7791f", width=1.5),
+                name="20 日均线",
+            ),
+            row=1,
+            col=1,
+        )
+    if "ma50" in chart_frame:
+        fig.add_trace(
+            go.Scatter(
+                x=chart_frame["date"],
+                y=chart_frame["ma50"],
+                mode="lines",
+                line=dict(color="#6d5dfc", width=1.5),
+                name="50 日均线",
+            ),
+            row=1,
+            col=1,
+        )
     fig.add_trace(
         go.Bar(
-            x=frame["date"],
-            y=frame["volume"],
+            x=chart_frame["date"],
+            y=chart_frame["volume"],
             marker_color="rgba(8, 127, 140, 0.35)",
             name="Volume",
         )
@@ -355,7 +599,8 @@ def render_price_chart(frame: pd.DataFrame) -> None:
         paper_bgcolor="rgba(255,255,255,0)",
         plot_bgcolor="rgba(255,255,255,0.72)",
         font=dict(color="#17212b", family="Inter, system-ui, sans-serif"),
-        showlegend=False,
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.01, xanchor="right", x=1),
         hovermode="x unified",
     )
     fig.update_xaxes(showgrid=False)
@@ -364,15 +609,16 @@ def render_price_chart(frame: pd.DataFrame) -> None:
 
 
 def render_header(snapshot: dict, metrics: dict, llm_available: bool) -> None:
-    llm_label = "LLM ready" if llm_available else "Local fallback"
+    llm_label = "AI 已连接" if llm_available else "本地占位分析"
+    timeframe = TIMEFRAME_OPTIONS.get(snapshot["timeframe"], snapshot["timeframe"])
     st.markdown(
         f"""
         <div class="app-header">
-            <div class="header-kicker">Local-First Market Attribution</div>
+            <div class="header-kicker">本地优先 · QQQ 归因分析</div>
             <div class="header-row">
                 <div>
-                    <div class="app-title">{html.escape(snapshot["ticker"])} command center</div>
-                    <div class="app-meta">{html.escape(snapshot["provider"])} · {html.escape(snapshot["timeframe"])} · {metrics["news_count"]} news items</div>
+                    <div class="app-title">{html.escape(snapshot["ticker"])} 投资观察台</div>
+                    <div class="app-meta">{html.escape(snapshot["provider"])} · {html.escape(timeframe)} · {metrics["news_count"]} 条新闻</div>
                 </div>
                 <div class="status-pill"><span class="dot"></span>{llm_label}</div>
             </div>
@@ -384,10 +630,10 @@ def render_header(snapshot: dict, metrics: dict, llm_available: bool) -> None:
 
 def render_metrics(metrics: dict) -> None:
     metric_items = [
-        ("Ticker", metrics["ticker"]),
-        ("Last Close", metrics["last_close"]),
-        ("Move", metrics["move_pct"]),
-        ("Range", metrics["range"]),
+        ("标的", metrics["ticker"]),
+        ("最新收盘", metrics["last_close"]),
+        ("区间涨跌", metrics["move_pct"]),
+        ("区间范围", metrics["range"]),
     ]
     cards = [
         (
@@ -401,9 +647,49 @@ def render_metrics(metrics: dict) -> None:
     st.markdown(f'<div class="metric-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
 
 
+def render_takeaway_panel(takeaway: dict) -> None:
+    st.markdown(
+        f"""
+        <div class="decision-panel">
+            <div class="decision-main">
+                <div class="decision-label">一句话结论 · {html.escape(takeaway["tone"])}</div>
+                <div class="decision-title">{html.escape(takeaway["title"])}</div>
+                <div class="decision-copy">{html.escape(takeaway["body"])}</div>
+            </div>
+            <div class="decision-side">
+                <div class="decision-label">建议阅读顺序</div>
+                <div class="step-list">
+                    <div class="step-item"><span class="step-number">1</span><span>先看价格图，确认趋势和成交量。</span></div>
+                    <div class="step-item"><span class="step-number">2</span><span>看新闻卡片，找可能的催化事件。</span></div>
+                    <div class="step-item"><span class="step-number">3</span><span>再看归因和大师批判，避免单一视角。</span></div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_mini_news(news: list[dict]) -> None:
+    if not news:
+        return
+
+    cards = []
+    for item in news[:3]:
+        source = html.escape(item.get("publisher") or "Unknown")
+        title = html.escape(item.get("title") or "Untitled")
+        cards.append(
+            '<div class="mini-news-item">'
+            f'<div class="mini-news-source">{source}</div>'
+            f'<div class="mini-news-title">{title}</div>'
+            "</div>"
+        )
+    st.markdown(f'<div class="mini-news">{"".join(cards)}</div>', unsafe_allow_html=True)
+
+
 def render_news_cards(news: list[dict]) -> None:
     if not news:
-        st.info("No recent news returned.")
+        st.info("暂时没有拉取到相关新闻。")
         return
 
     cards = []
@@ -435,21 +721,76 @@ def render_critique_cards(critique) -> None:
     st.markdown(f'<div class="critique-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
 
 
+def render_investment_dashboard(technical: dict, risk: dict, checklist: list[str]) -> None:
+    cards = [
+        (
+            "趋势状态",
+            technical["trend_label"],
+            technical["trend_detail"],
+        ),
+        (
+            "距 20 日均线",
+            format_optional_pct(technical["distance_to_ma20"]),
+            "正数代表价格高于短期均线，负数代表跌破短期均线。",
+        ),
+        (
+            "风险状态",
+            risk["risk_label"],
+            risk["detail"],
+        ),
+        (
+            "最大回撤",
+            format_optional_pct(risk["max_drawdown"]),
+            f"年化波动率：{format_optional_pct(risk['annualized_volatility'])}",
+        ),
+    ]
+    html_cards = [
+        '<div class="insight-card">'
+        f'<div class="insight-label">{html.escape(label)}</div>'
+        f'<div class="insight-value">{html.escape(value)}</div>'
+        f'<div class="insight-detail">{html.escape(detail)}</div>'
+        "</div>"
+        for label, value, detail in cards
+    ]
+    st.markdown(f'<div class="insight-grid">{"".join(html_cards)}</div>', unsafe_allow_html=True)
+
+    st.subheader("行动清单")
+    checklist_html = "".join(f'<div class="check-item">{html.escape(item)}</div>' for item in checklist)
+    st.markdown(f'<div class="checklist">{checklist_html}</div>', unsafe_allow_html=True)
+
+
 def main() -> None:
     inject_styles()
 
     with st.sidebar:
-        st.header("Controls")
-        ticker = st.text_input("Ticker", value="QQQ").strip().upper() or "QQQ"
-        timeframe = st.selectbox("Timeframe", ["5d", "1mo", "3mo", "6mo", "1y"], index=1)
+        st.header("分析设置")
+        st.caption("默认分析 QQQ。只想快速看一眼时，直接点下面的刷新即可。")
+        ticker = st.text_input("标的代码", value="QQQ").strip().upper() or "QQQ"
+        timeframe = st.selectbox(
+            "观察周期",
+            list(TIMEFRAME_OPTIONS),
+            index=1,
+            format_func=lambda value: TIMEFRAME_OPTIONS[value],
+        )
         provider = st.selectbox(
-            "Provider",
+            "数据源",
             [DataProvider.YAHOO.value, DataProvider.GOOGLE_MOCK.value],
             index=0,
+            format_func=lambda value: f"{value} · {PROVIDER_HELP[value]}",
         )
-        run_analysis = st.button("Run", type="primary", use_container_width=True)
         st.divider()
-        st.caption("Portfolio parser is local-only in Phase 1.")
+        st.subheader("我的情景推演")
+        position_value = st.number_input(
+            "QQQ 持仓市值（美元）",
+            min_value=0.0,
+            value=0.0,
+            step=1000.0,
+            help="只在本地用于估算情景影响，不会上传。",
+        )
+        shock_pct = st.slider("压力/乐观情景幅度", min_value=3, max_value=25, value=10, step=1)
+        run_analysis = st.button("刷新分析", type="primary", use_container_width=True)
+        st.divider()
+        st.caption("组合文件解析仍是本地占位功能，不会上传你的个人文件。")
 
     if "snapshot" not in st.session_state or run_analysis:
         with st.spinner("Loading market context"):
@@ -460,22 +801,56 @@ def main() -> None:
     portfolio_state = LocalDocumentParser().get_portfolio_state()
     llm_client = build_default_llm_client()
     metrics = compute_market_metrics(price_frame, len(snapshot["news"]), snapshot["ticker"])
-
-    render_header(snapshot, metrics, llm_available=llm_client.__class__.__name__ != "LocalFallbackLLMClient")
-    render_metrics(metrics)
-
-    chart_tab, news_tab, attribution_tab, critique_tab, data_tab = st.tabs(
-        ["Price", "News", "Attribution", "Master Critique", "Data"]
+    takeaway = build_plain_language_takeaway(metrics, snapshot["timeframe"], snapshot["news"])
+    technical = build_technical_snapshot(price_frame)
+    risk = build_risk_snapshot(price_frame)
+    checklist = build_action_checklist(
+        technical=technical,
+        risk=risk,
+        move_pct=metrics.get("move_pct_raw"),
+        position_value=position_value,
+    )
+    scenario_table = build_scenario_table(price_frame, position_value, float(shock_pct))
+    report_markdown = build_markdown_report(
+        ticker=snapshot["ticker"],
+        timeframe=TIMEFRAME_OPTIONS.get(snapshot["timeframe"], snapshot["timeframe"]),
+        takeaway=takeaway,
+        metrics=metrics,
+        technical=technical,
+        risk=risk,
+        checklist=checklist,
     )
 
-    with chart_tab:
+    render_header(snapshot, metrics, llm_available=llm_client.__class__.__name__ != "LocalFallbackLLMClient")
+    render_takeaway_panel(takeaway)
+    render_metrics(metrics)
+
+    overview_tab, dashboard_tab, news_tab, attribution_tab, critique_tab, data_tab = st.tabs(
+        ["总览", "投资仪表盘", "新闻", "归因", "大师批判", "原始数据"]
+    )
+
+    with overview_tab:
         if price_frame.empty:
-            st.warning("No price data returned.")
+            st.warning("没有拉取到价格数据。可以换一个数据源或稍后重试。")
         else:
             with st.container():
                 st.markdown('<div class="section-card">', unsafe_allow_html=True)
                 render_price_chart(price_frame)
                 st.markdown("</div>", unsafe_allow_html=True)
+        st.subheader("最近新闻线索")
+        render_mini_news(snapshot["news"])
+
+    with dashboard_tab:
+        render_investment_dashboard(technical, risk, checklist)
+        st.subheader("持仓情景推演")
+        st.dataframe(scenario_table, hide_index=True, use_container_width=True)
+        st.download_button(
+            "下载本地 Markdown 报告",
+            data=report_markdown,
+            file_name=f"{snapshot['ticker'].lower()}_local_report.md",
+            mime="text/markdown",
+            use_container_width=True,
+        )
 
     with news_tab:
         render_news_cards(snapshot["news"])
@@ -484,11 +859,11 @@ def main() -> None:
         with st.spinner("Synthesizing attribution"):
             attribution = AttributionEngine(llm_client).run(snapshot)
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.subheader("Objective Narrative")
+        st.subheader("客观归因")
         st.write(attribution.narrative)
         st.markdown("</div>", unsafe_allow_html=True)
         if attribution.evidence:
-            st.subheader("Evidence")
+            st.subheader("证据")
             st.dataframe(pd.DataFrame([item.model_dump() for item in attribution.evidence]), hide_index=True)
 
     with critique_tab:
@@ -501,11 +876,11 @@ def main() -> None:
         render_critique_cards(critique)
 
     with data_tab:
-        st.subheader("Recent News")
+        st.subheader("新闻原始数据")
         st.dataframe(pd.DataFrame(snapshot["news"]), hide_index=True, use_container_width=True)
-        st.subheader("OHLCV")
+        st.subheader("价格原始数据")
         st.dataframe(price_frame, hide_index=True, use_container_width=True)
-        st.subheader("Portfolio State")
+        st.subheader("本地组合状态")
         st.json(portfolio_state)
 
 

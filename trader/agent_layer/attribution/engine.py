@@ -6,7 +6,7 @@ from trader.models import AttributionEvidence, AttributionResult
 
 ATTRIBUTION_SYSTEM_PROMPT = """You are an objective market attribution analyst.
 Correlate price action with supplied news only. Distinguish observed facts from inference.
-Do not invent events. Return a concise narrative suitable for a local trading journal."""
+Do not invent events. Return a concise Chinese narrative suitable for a local trading journal."""
 
 
 class AttributionEngine:
@@ -46,8 +46,8 @@ def _build_evidence(market_snapshot: dict) -> list[AttributionEvidence]:
         move_pct = ((end_close / start_close) - 1) * 100 if start_close else 0.0
         evidence.append(
             AttributionEvidence(
-                label="Price move",
-                detail=f"{start['date']} close {start_close:.2f} to {end['date']} close {end_close:.2f}: {move_pct:+.2f}%",
+                label="价格变化",
+                detail=f"{start['date']} 收盘 {start_close:.2f} 到 {end['date']} 收盘 {end_close:.2f}: {move_pct:+.2f}%",
                 source=market_snapshot.get("provider"),
             )
         )
@@ -55,10 +55,9 @@ def _build_evidence(market_snapshot: dict) -> list[AttributionEvidence]:
     for item in news[:3]:
         evidence.append(
             AttributionEvidence(
-                label="News context",
+                label="新闻线索",
                 detail=item.get("title", "Untitled"),
                 source=item.get("publisher"),
             )
         )
     return evidence
-

@@ -7,19 +7,21 @@ from trader.models import AttributionResult, CritiqueResult, CritiqueView
 MASTER_SKILLS = {
     "Warren Buffett": (
         "You are Warren Buffett. Evaluate the data based ONLY on intrinsic value, moats, "
-        "and cash-flow generation. Ignore short-term macro noise."
+        "and cash-flow generation. Ignore short-term macro noise. Reply in concise Chinese."
     ),
     "Charlie Munger": (
         "You are Charlie Munger. Evaluate using worldly wisdom. Point out potential "
-        "psychological misjudgments, stupidity, or opportunity cost. Be harsh, direct, and witty."
+        "psychological misjudgments, stupidity, or opportunity cost. Be harsh, direct, and witty. "
+        "Reply in concise Chinese."
     ),
     "Duan Yongping": (
         "You are Duan Yongping. Focus on 'Right Thing, Do Things Right' (本分). Focus intensely "
-        "on the business model, free cash flow, and heavy concentration in top-tier companies."
+        "on the business model, free cash flow, and heavy concentration in top-tier companies. "
+        "Reply in concise Chinese."
     ),
     "Ray Dalio": (
         "You are Ray Dalio. Evaluate the data strictly through the lens of macro-economic cycles, "
-        "debt cycles, inflation, and structural diversification."
+        "debt cycles, inflation, and structural diversification. Reply in concise Chinese."
     ),
 }
 
@@ -59,4 +61,3 @@ class MasterCritiqueEngine:
                 "portfolio_state_present": bool(portfolio_state),
             },
         )
-
