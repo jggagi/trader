@@ -42,7 +42,7 @@ def test_build_technical_snapshot_labels_uptrend() -> None:
 def test_build_risk_snapshot_and_scenarios() -> None:
     frame = _sample_frame()
     risk = build_risk_snapshot(frame)
-    scenarios = build_scenario_table(frame, position_value=10_000, shock_pct=10)
+    scenarios = build_scenario_table(frame, position_value=10_000, shock_pct=10, currency_symbol="$")
 
     assert risk["max_drawdown"] == 0
     assert list(scenarios["情景"]) == ["压力情景", "温和回调", "基准不变", "温和上涨", "乐观情景"]

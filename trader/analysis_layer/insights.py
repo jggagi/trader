@@ -99,7 +99,12 @@ def build_risk_snapshot(frame: pd.DataFrame) -> dict[str, Any]:
     }
 
 
-def build_scenario_table(frame: pd.DataFrame, position_value: float, shock_pct: float) -> pd.DataFrame:
+def build_scenario_table(
+    frame: pd.DataFrame,
+    position_value: float,
+    shock_pct: float,
+    currency_symbol: str,
+) -> pd.DataFrame:
     if frame.empty:
         return pd.DataFrame(columns=["情景", "价格变化", "估算价格", "持仓影响"])
 
@@ -119,8 +124,8 @@ def build_scenario_table(frame: pd.DataFrame, position_value: float, shock_pct: 
             {
                 "情景": label,
                 "价格变化": f"{move_pct:+.1f}%",
-                "估算价格": f"${estimated_price:,.2f}",
-                "持仓影响": f"${impact:,.0f}",
+                "估算价格": f"{currency_symbol}{estimated_price:,.2f}",
+                "持仓影响": f"{currency_symbol}{impact:,.0f}",
             }
         )
     return pd.DataFrame(rows)

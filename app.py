@@ -20,6 +20,7 @@ from trader.analysis_layer.insights import (
     enrich_price_frame,
 )
 from trader.data_layer.factory import DataProvider, create_market_data_fetcher
+from trader.data_layer.symbols import resolve_symbol
 from trader.state_layer.parser import LocalDocumentParser
 
 
@@ -443,19 +444,25 @@ def inject_styles() -> None:
 @st.cache_data(ttl=900, show_spinner=False)
 def load_market_snapshot(provider: str, ticker: str, timeframe: str) -> dict:
     errors: list[str] = []
+    symbol = resolve_symbol(ticker)
     try:
         fetcher = create_market_data_fetcher(DataProvider(provider))
-        prices = fetcher.get_historical_prices(ticker=ticker, timeframe=timeframe)
-        news = fetcher.get_recent_news(ticker=ticker)
+        prices = fetcher.get_historical_prices(ticker=symbol.provider_symbol, timeframe=timeframe)
+        news = fetcher.get_recent_news(ticker=symbol.provider_symbol)
     except Exception as exc:
         errors.append(f"{provider} 数据拉取失败，已切换到离线演示数据：{exc}")
         fallback = create_market_data_fetcher(DataProvider.GOOGLE_MOCK)
-        prices = fallback.get_historical_prices(ticker=ticker, timeframe=timeframe)
-        news = fallback.get_recent_news(ticker=ticker)
+        prices = fallback.get_historical_prices(ticker=symbol.provider_symbol, timeframe=timeframe)
+        news = fallback.get_recent_news(ticker=symbol.provider_symbol)
         provider = DataProvider.GOOGLE_MOCK.value
     return {
         "provider": provider,
-        "ticker": ticker.upper(),
+        "ticker": symbol.display_symbol,
+        "query": symbol.query,
+        "provider_symbol": symbol.provider_symbol,
+        "market": symbol.market,
+        "currency_symbol": symbol.currency_symbol,
+        "symbol_note": symbol.note,
         "timeframe": timeframe,
         "prices": [point.model_dump() for point in prices],
         "news": [item.model_dump() for item in news],
@@ -477,7 +484,7 @@ def format_optional_pct(value: float | None) -> str:
     return f"{value:+.2f}%"
 
 
-def compute_market_metrics(frame: pd.DataFrame, news_count: int, ticker: str) -> dict:
+def compute_market_metrics(frame: pd.DataFrame, news_count: int, ticker: str, currency_symbol: str) -> dict:
     if frame.empty:
         return {
             "ticker": ticker,
@@ -497,12 +504,12 @@ def compute_market_metrics(frame: pd.DataFrame, news_count: int, ticker: str) ->
     low = float(frame["low"].min())
     return {
         "ticker": ticker,
-        "last_close": f"${last_close:,.2f}",
+        "last_close": f"{currency_symbol}{last_close:,.2f}",
         "first_close": first_close,
         "last_close_raw": last_close,
         "move_pct_raw": move_pct,
         "move_pct": f"{move_pct:+.2f}%",
-        "range": f"${low:,.2f} - ${high:,.2f}",
+        "range": f"{currency_symbol}{low:,.2f} - {currency_symbol}{high:,.2f}",
         "news_count": str(news_count),
     }
 
@@ -629,7 +636,7 @@ def render_header(snapshot: dict, metrics: dict, llm_available: bool) -> None:
             <div class="header-row">
                 <div>
                     <div class="app-title">{html.escape(snapshot["ticker"])} 投资观察台</div>
-                    <div class="app-meta">{html.escape(snapshot["provider"])} · {html.escape(timeframe)} · {metrics["news_count"]} 条新闻</div>
+                    <div class="app-meta">{html.escape(snapshot["provider"])} · {html.escape(snapshot["market"])} · 数据代码 {html.escape(snapshot["provider_symbol"])} · {html.escape(timeframe)} · {metrics["news_count"]} 条新闻</div>
                 </div>
                 <div class="status-pill"><span class="dot"></span>{llm_label}</div>
             </div>
@@ -801,7 +808,7 @@ def main() -> None:
 
     with st.sidebar:
         st.header("分析设置")
-        st.caption("输入任意美股、ETF 或指数代码。只想快速看一眼时，直接点下面的刷新即可。")
+        st.caption("输入美股/ETF 代码，或 A 股 6 位代码。例：SPY、AAPL、600519、000001。")
         default_ticker = get_default_ticker()
         ticker = st.text_input("标的代码", value=default_ticker).strip().upper() or default_ticker
         timeframe = st.selectbox(
@@ -819,7 +826,7 @@ def main() -> None:
         st.divider()
         st.subheader("我的情景推演")
         position_value = st.number_input(
-            f"{ticker} 持仓市值（美元）",
+            f"{ticker} 持仓市值（本币）",
             min_value=0.0,
             value=0.0,
             step=1000.0,
@@ -830,7 +837,8 @@ def main() -> None:
         st.divider()
         st.caption("组合文件解析仍是本地占位功能，不会上传你的个人文件。")
 
-    if "snapshot" not in st.session_state or run_analysis:
+    needs_snapshot = "snapshot" not in st.session_state or "provider_symbol" not in st.session_state.get("snapshot", {})
+    if needs_snapshot or run_analysis:
         with st.spinner("Loading market context"):
             st.session_state.snapshot = load_market_snapshot(provider, ticker, timeframe)
 
@@ -838,7 +846,12 @@ def main() -> None:
     price_frame = build_price_frame(snapshot)
     portfolio_state = LocalDocumentParser().get_portfolio_state()
     llm_client = build_default_llm_client()
-    metrics = compute_market_metrics(price_frame, len(snapshot["news"]), snapshot["ticker"])
+    metrics = compute_market_metrics(
+        price_frame,
+        len(snapshot["news"]),
+        snapshot["ticker"],
+        snapshot["currency_symbol"],
+    )
     takeaway = build_plain_language_takeaway(metrics, snapshot["timeframe"], snapshot["news"])
     technical = build_technical_snapshot(price_frame)
     risk = build_risk_snapshot(price_frame)
@@ -849,7 +862,12 @@ def main() -> None:
         position_value=position_value,
         ticker=snapshot["ticker"],
     )
-    scenario_table = build_scenario_table(price_frame, position_value, float(shock_pct))
+    scenario_table = build_scenario_table(
+        price_frame,
+        position_value,
+        float(shock_pct),
+        snapshot["currency_symbol"],
+    )
     report_markdown = build_markdown_report(
         ticker=snapshot["ticker"],
         timeframe=TIMEFRAME_OPTIONS.get(snapshot["timeframe"], snapshot["timeframe"]),
@@ -864,6 +882,8 @@ def main() -> None:
     render_runtime_notice()
     for error in snapshot.get("errors", []):
         st.warning(error)
+    if snapshot.get("symbol_note"):
+        st.caption(snapshot["symbol_note"])
     render_takeaway_panel(takeaway)
     render_metrics(metrics)
 
