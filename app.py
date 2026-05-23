@@ -19,6 +19,7 @@ from trader.analysis_layer.insights import (
     build_technical_snapshot,
     enrich_price_frame,
 )
+from trader.data_layer.etf_catalog import get_markets, get_presets, get_styles
 from trader.data_layer.factory import DataProvider, create_market_data_fetcher
 from trader.data_layer.symbols import resolve_symbol
 from trader.state_layer.parser import LocalDocumentParser
@@ -39,28 +40,6 @@ TIMEFRAME_OPTIONS = {
 PROVIDER_HELP = {
     DataProvider.YAHOO.value: "真实行情与新闻",
     DataProvider.GOOGLE_MOCK.value: "离线演示数据",
-}
-
-ETF_PRESETS = {
-    "自定义输入": None,
-    "美股大盘 · SPY · S&P 500": "SPY",
-    "美股大盘 · VOO · Vanguard S&P 500": "VOO",
-    "美股科技成长 · QQQ · Nasdaq 100": "QQQ",
-    "美股科技成长 · QQQM · Nasdaq 100 低费率版本": "QQQM",
-    "美股科技 · VGT · 信息技术": "VGT",
-    "美股科技 · XLK · 科技精选行业": "XLK",
-    "美股成长 · VUG · 大盘成长": "VUG",
-    "美股成长 · SCHG · 大盘成长": "SCHG",
-    "美股成长 · IWF · Russell 1000 Growth": "IWF",
-    "美股半导体 · SMH · 半导体": "SMH",
-    "A股大盘 · 510300 · 沪深300ETF": "510300",
-    "A股大盘 · 510050 · 上证50ETF": "510050",
-    "A股科技成长 · 588000 · 科创50ETF": "588000",
-    "A股成长 · 159915 · 创业板ETF": "159915",
-    "A股成长 · 159949 · 创业板50ETF": "159949",
-    "A股半导体 · 512480 · 半导体ETF": "512480",
-    "A股科技 · 515000 · 科技ETF": "515000",
-    "A股芯片 · 159995 · 芯片ETF": "159995",
 }
 
 
@@ -824,6 +803,26 @@ def render_investment_dashboard(technical: dict, risk: dict, checklist: list[str
     st.markdown(f'<div class="checklist">{checklist_html}</div>', unsafe_allow_html=True)
 
 
+def render_etf_catalog_preview(presets) -> None:
+    if not presets:
+        st.info("当前筛选下没有 ETF。")
+        return
+    preview = pd.DataFrame(
+        [
+            {
+                "代码": item.symbol,
+                "名称": item.name,
+                "市场": item.market,
+                "风格": item.style,
+                "主题": item.theme,
+                "说明": item.note,
+            }
+            for item in presets
+        ]
+    )
+    st.dataframe(preview, hide_index=True, use_container_width=True)
+
+
 def main() -> None:
     inject_styles()
     configure_streamlit_secrets()
@@ -832,18 +831,32 @@ def main() -> None:
         st.header("分析设置")
         st.caption("输入美股/ETF 代码，或 A 股 6 位代码。例：SPY、AAPL、600519、000001。")
         default_ticker = get_default_ticker()
-        preset_label = st.selectbox(
-            "偏好 ETF 快捷选择",
-            list(ETF_PRESETS),
-            index=0,
-            help="这些只是常见的大盘、科技、成长风格 ETF 快捷入口，不构成投资建议。",
+        market_filter = st.segmented_control(
+            "ETF 市场",
+            get_markets(),
+            default="全部",
+            help="先按市场缩小范围。",
         )
-        preset_ticker = ETF_PRESETS[preset_label]
-        if preset_ticker:
-            ticker = preset_ticker
-            st.caption(f"已选择：{preset_label}")
+        style_filter = st.selectbox(
+            "ETF 风格",
+            get_styles(market_filter),
+            index=0,
+            help="按你的偏好筛选大盘、科技成长、成长、低波红利等风格。",
+        )
+        filtered_presets = get_presets(market_filter, style_filter)
+        selected_preset = st.selectbox(
+            "ETF 快捷选择",
+            [None, *filtered_presets],
+            format_func=lambda item: "自定义输入" if item is None else item.label,
+            help="这些只是常见 ETF 快捷入口，不构成投资建议。",
+        )
+        if selected_preset:
+            ticker = selected_preset.symbol
+            st.caption(f"{selected_preset.market} · {selected_preset.style} · {selected_preset.theme} · {selected_preset.note}")
         else:
             ticker = st.text_input("标的代码", value=default_ticker).strip().upper() or default_ticker
+        with st.expander("查看当前 ETF 列表", expanded=False):
+            render_etf_catalog_preview(filtered_presets)
         timeframe = st.selectbox(
             "观察周期",
             list(TIMEFRAME_OPTIONS),
