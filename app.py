@@ -82,12 +82,35 @@ def inject_styles() -> None:
         }
 
         [data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #101820 0%, #14212a 100%);
-            border-right: 1px solid rgba(255,255,255,0.06);
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.84), rgba(245,249,250,0.72)),
+                radial-gradient(circle at 20% 0%, rgba(8, 127, 140, 0.12), transparent 18rem);
+            border-right: 1px solid rgba(255,255,255,0.78);
+            box-shadow: 16px 0 42px rgba(22, 32, 42, 0.08);
+            backdrop-filter: blur(22px) saturate(1.35);
+            -webkit-backdrop-filter: blur(22px) saturate(1.35);
         }
 
         [data-testid="stSidebar"] * {
-            color: #f7fafc;
+            color: var(--ink);
+        }
+
+        [data-testid="stSidebar"] h1,
+        [data-testid="stSidebar"] h2,
+        [data-testid="stSidebar"] h3,
+        [data-testid="stSidebar"] label {
+            color: #101820 !important;
+            font-weight: 780;
+        }
+
+        [data-testid="stSidebar"] p,
+        [data-testid="stSidebar"] small,
+        [data-testid="stSidebar"] [data-testid="stCaptionContainer"] * {
+            color: #56636f !important;
+        }
+
+        [data-testid="stSidebar"] hr {
+            border-color: rgba(22, 32, 42, 0.10);
         }
 
         [data-testid="stSidebar"] input,
@@ -96,15 +119,28 @@ def inject_styles() -> None:
             color: var(--ink);
         }
 
+        [data-testid="stSidebar"] [data-baseweb="input"],
+        [data-testid="stSidebar"] [data-baseweb="select"] > div {
+            background: rgba(255,255,255,0.82);
+            border-color: rgba(22, 32, 42, 0.10);
+            border-radius: 8px;
+            box-shadow: 0 8px 22px rgba(22, 32, 42, 0.05);
+        }
+
         [data-testid="stSidebar"] [data-baseweb="select"] * {
             color: var(--ink) !important;
         }
 
         [data-testid="stSidebar"] button[kind="primary"] {
-            background: var(--teal);
-            border-color: var(--teal);
+            background: linear-gradient(180deg, #0a8d98, #087f8c);
+            border-color: rgba(8, 127, 140, 0.75);
             border-radius: 8px;
             font-weight: 760;
+            box-shadow: 0 12px 26px rgba(8, 127, 140, 0.22);
+        }
+
+        [data-testid="stSidebar"] button[kind="primary"] * {
+            color: #ffffff !important;
         }
 
         [data-testid="stSidebar"] button[kind="primary"]:hover {
@@ -113,10 +149,11 @@ def inject_styles() -> None:
         }
 
         [data-testid="stSidebar"] button[kind="secondary"] {
-            background: rgba(255,255,255,0.96);
-            border: 1px solid rgba(255,255,255,0.18);
+            background: rgba(255,255,255,0.78);
+            border: 1px solid rgba(22, 32, 42, 0.10);
             border-radius: 8px;
-            box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+            box-shadow: 0 8px 22px rgba(22, 32, 42, 0.06);
+            transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
         }
 
         [data-testid="stSidebar"] button[kind="secondary"] * {
@@ -125,8 +162,10 @@ def inject_styles() -> None:
         }
 
         [data-testid="stSidebar"] button[kind="secondary"]:hover {
-            background: var(--teal-soft);
+            background: rgba(228,245,246,0.95);
             border-color: rgba(8, 127, 140, 0.45);
+            box-shadow: 0 12px 28px rgba(22, 32, 42, 0.10);
+            transform: translateY(-1px);
         }
 
         .block-container {
