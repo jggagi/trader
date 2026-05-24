@@ -1250,7 +1250,7 @@ def main() -> None:
             st.caption("这些数据有披露滞后，只适合学习，不适合实时跟单。")
         else:
             st.header("分析设置")
-            st.caption("输入美股/ETF 代码，或 A 股 6 位代码。例：SPY、AAPL、600519、000001。")
+            st.caption("输入美股、A股、港股或日股代码。例：SPY、600519、HK:700、0700.HK、JP:7203、7203.T。")
             default_ticker = get_default_ticker()
             market_filter = st.selectbox(
                 "ETF 市场",

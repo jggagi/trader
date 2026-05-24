@@ -20,3 +20,11 @@ def test_styles_follow_market_filter() -> None:
 
     assert "低波红利" in styles
     assert "科技成长" in styles
+
+
+def test_catalog_includes_hong_kong_and_japan_markets() -> None:
+    symbols = {item.symbol for item in ETF_PRESETS}
+
+    assert {"2800.HK", "3033.HK", "1321.T", "1306.T"} <= symbols
+    assert get_presets(market="港股", style="科技成长")
+    assert get_presets(market="日本股", style="大盘核心")

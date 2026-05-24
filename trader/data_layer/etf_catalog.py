@@ -46,6 +46,18 @@ ETF_PRESETS = [
     EtfPreset("515100", "低波红利ETF", "A股", "低波红利", "红利/低波", "红利低波100"),
     EtfPreset("510880", "红利ETF", "A股", "低波红利", "红利", "上证红利"),
     EtfPreset("515080", "中证红利ETF", "A股", "低波红利", "红利", "中证红利"),
+    EtfPreset("2800.HK", "盈富基金 Tracker Fund of Hong Kong", "港股", "大盘核心", "大盘", "香港恒生指数核心暴露"),
+    EtfPreset("3033.HK", "南方恒生科技 ETF", "港股", "科技成长", "科技/成长", "恒生科技指数"),
+    EtfPreset("3067.HK", "安硕恒生科技 ETF", "港股", "科技成长", "科技/成长", "恒生科技指数低成本工具"),
+    EtfPreset("2828.HK", "恒生中国企业 ETF", "港股", "大盘核心", "大盘", "H 股大型公司"),
+    EtfPreset("3110.HK", "Global X 恒生高股息率 ETF", "港股", "低波红利", "红利", "香港高股息率股票"),
+    EtfPreset("3145.HK", "Global X 亚洲高股息率 ETF", "港股", "低波红利", "红利", "亚洲高股息股票"),
+    EtfPreset("1321.T", "NEXT FUNDS Nikkei 225 ETF", "日本股", "大盘核心", "大盘", "日经225核心暴露"),
+    EtfPreset("1306.T", "NEXT FUNDS TOPIX ETF", "日本股", "大盘核心", "大盘", "日本东证指数广泛暴露"),
+    EtfPreset("2568.T", "上场インデックスファンド米国株式 Nasdaq100", "日本股", "科技成长", "科技/成长", "日本上市 Nasdaq 100 ETF"),
+    EtfPreset("2644.T", "Global X Japan Semiconductor ETF", "日本股", "科技成长", "半导体", "日本半导体主题"),
+    EtfPreset("2516.T", "TSE Growth Core ETF", "日本股", "成长", "成长", "日本成长股暴露"),
+    EtfPreset("1478.T", "iShares MSCI Japan High Dividend ETF", "日本股", "低波红利", "红利", "日本高股息股票"),
 ]
 
 

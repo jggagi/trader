@@ -43,3 +43,23 @@ def test_preserves_explicit_china_suffix() -> None:
 def test_resolve_shanghai_listed_etf() -> None:
     assert resolve_symbol("510300").provider_symbol == "510300.SS"
     assert resolve_symbol("588000").provider_symbol == "588000.SS"
+
+
+def test_resolve_hong_kong_suffix_and_prefix() -> None:
+    suffix_symbol = resolve_symbol("700.hk")
+    prefix_symbol = resolve_symbol("HK:700")
+
+    assert suffix_symbol.provider_symbol == "0700.HK"
+    assert suffix_symbol.market == "Hong Kong"
+    assert suffix_symbol.currency_symbol == "HK$"
+    assert prefix_symbol.provider_symbol == "0700.HK"
+
+
+def test_resolve_japan_suffix_and_prefix() -> None:
+    suffix_symbol = resolve_symbol("7203.t")
+    prefix_symbol = resolve_symbol("JP:7203")
+
+    assert suffix_symbol.provider_symbol == "7203.T"
+    assert suffix_symbol.market == "Japan"
+    assert suffix_symbol.currency_symbol == "¥"
+    assert prefix_symbol.provider_symbol == "7203.T"
