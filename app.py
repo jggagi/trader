@@ -112,6 +112,23 @@ def inject_styles() -> None:
             border-color: #066b75;
         }
 
+        [data-testid="stSidebar"] button[kind="secondary"] {
+            background: rgba(255,255,255,0.96);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 8px;
+            box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+        }
+
+        [data-testid="stSidebar"] button[kind="secondary"] * {
+            color: var(--ink) !important;
+            font-weight: 760;
+        }
+
+        [data-testid="stSidebar"] button[kind="secondary"]:hover {
+            background: var(--teal-soft);
+            border-color: rgba(8, 127, 140, 0.45);
+        }
+
         .block-container {
             padding-top: 1.35rem;
             padding-bottom: 3rem;
