@@ -3,7 +3,13 @@ from trader.analysis_layer.frameworks import build_investment_frameworks
 
 def test_stock_frameworks_include_macro_context_and_value_lens() -> None:
     frameworks = build_investment_frameworks(
-        snapshot={"ticker": "AAPL", "provider_symbol": "AAPL", "market": "US / Global"},
+        snapshot={
+            "ticker": "AAPL",
+            "provider_symbol": "AAPL",
+            "market": "US / Global",
+            "timeframe": "1mo",
+            "news": [{"title": "Apple reports services growth"}],
+        },
         metrics={"move_pct_raw": 6.0, "move_pct": "+6.00%"},
         technical={"trend_label": "上升趋势", "distance_to_ma20": 3.0},
         risk={"risk_label": "波动温和", "max_drawdown": -2.0},
@@ -17,6 +23,8 @@ def test_stock_frameworks_include_macro_context_and_value_lens() -> None:
     assert all(framework.items for framework in frameworks)
     assert all(framework.next_questions for framework in frameworks)
     assert all(item.simulated_answer for framework in frameworks for item in framework.items)
+    assert any("AAPL" in item.simulated_answer for framework in frameworks for item in framework.items)
+    assert any("Apple reports services growth" in item.simulated_answer for framework in frameworks for item in framework.items)
 
 
 def test_value_framework_warns_about_chasing_strength() -> None:

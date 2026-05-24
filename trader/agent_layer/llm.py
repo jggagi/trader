@@ -99,32 +99,39 @@ def _local_attribution(user_payload: dict[str, Any]) -> str:
 def _local_critique(system_prompt: str, user_payload: dict[str, Any]) -> str:
     snapshot = user_payload.get("market_snapshot", {})
     ticker = snapshot.get("ticker") or "标的"
+    timeframe = snapshot.get("timeframe") or "当前周期"
+    asset_type = snapshot.get("asset_type_hint") or "标的"
+    market = snapshot.get("market") or "未知市场"
     prices = snapshot.get("prices") or []
     move = _price_move(prices)
     move_text = "数据不足" if move is None else f"{move:+.2f}%"
+    news = snapshot.get("news") or []
+    news_text = "；".join(item.get("title", "未命名新闻") for item in news[:2]) or "暂无明确新闻线索"
+    context = f"{ticker}（{market}，{asset_type}）在 {timeframe} 内涨跌 {move_text}，新闻线索：{news_text}"
 
     if "Warren Buffett" in system_prompt:
         return (
-            f"本地视角：{ticker} 短期涨跌 {move_text} 不是核心。"
-            "真正要问的是这个标的背后资产的护城河、资本回报率和自由现金流是否仍然优秀。"
+            f"本地 Buffett 视角：{context}。短期涨跌不是核心。"
+            f"如果 {ticker} 是个股，真正要问的是护城河、资本回报率和自由现金流是否仍然优秀；"
+            "如果是 ETF，要看底层成分是否整体具备高质量生意。"
             "如果只是因为价格涨了才想追，需要先冷静。"
         )
     if "Charlie Munger" in system_prompt:
         return (
-            f"本地视角：{ticker} 的短期表现是 {move_text}。"
-            "最容易犯的错是把近期走势当作必然趋势，或者用新闻给已经想做的交易找借口。"
+            f"本地 Munger 视角：{context}。"
+            f"最容易犯的错是把 {ticker} 的近期走势当作必然趋势，或者用这些新闻给已经想做的交易找借口。"
             "先排除冲动，再谈判断。"
         )
     if "Duan Yongping" in system_prompt:
         return (
-            f"本地视角：看 {ticker} 要回到本分：是否买的是好商业、好现金流、好管理层。"
+            f"本地段永平视角：{context}。看 {ticker} 要回到本分：是否买的是好商业、好现金流、好管理层。"
             "如果你的持仓逻辑是长期分享顶级公司的价值创造，短期噪音权重应降低；"
             "如果逻辑只是短线猜方向，仓位就要克制。"
         )
     if "Ray Dalio" in system_prompt:
         return (
-            f"本地视角：{ticker} 的短期变化 {move_text} 要放在利率、通胀、流动性和风险偏好里看。"
-            "不同资产对久期、增长预期、信用条件和流动性的敏感度不同，宏观环境转向时波动可能被放大。"
+            f"本地 Dalio 视角：{context}。这要放在利率、通胀、流动性和风险偏好里看。"
+            f"{asset_type} 对久期、增长预期、信用条件和流动性的敏感度不同，宏观环境转向时波动可能被放大。"
             "不要让单一资产承担全部周期风险。"
         )
     return f"本地视角：{ticker} 当前变化为 {move_text}，建议结合价格、新闻和仓位约束一起判断。"
