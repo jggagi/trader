@@ -23,6 +23,7 @@ from trader.analysis_layer.insights import (
     build_weather_forecast,
     enrich_price_frame,
 )
+from trader.analysis_layer.update_policy import get_policy, get_update_policies
 from trader.data_layer.etf_catalog import get_markets, get_presets, get_styles
 from trader.data_layer.factory import DataProvider, create_market_data_fetcher
 from trader.data_layer.master_holdings import (
@@ -747,8 +748,9 @@ def inject_styles() -> None:
     )
 
 
-@st.cache_data(ttl=900, show_spinner=False)
-def load_market_snapshot(provider: str, ticker: str, timeframe: str) -> dict:
+@st.cache_data(ttl=86400, show_spinner=False)
+def load_market_snapshot(provider: str, ticker: str, timeframe: str, cache_day: str) -> dict:
+    del cache_day
     errors: list[str] = []
     symbol = resolve_symbol(ticker)
     try:
@@ -822,6 +824,28 @@ def get_daily_analysis(
             cache_hit=False,
         )
     return save_daily_analysis(cache_key=cache_key, attribution=attribution, critique=critique)
+
+
+def render_update_policy_panel(compact: bool = False) -> None:
+    policies = get_update_policies()
+    if compact:
+        st.caption("更新节奏：行情/新闻日更 · 推荐关注日更 · 归因/批判日更 · 大师持仓周更 · ETF 目录月更")
+        return
+
+    st.subheader("数据更新节奏")
+    st.caption("按照长期投资的信息半衰期安排刷新频率，减少噪音和不必要的 API 成本。")
+    policy_frame = pd.DataFrame(
+        [
+            {
+                "数据源": policy.source,
+                "频率": policy.cadence_label,
+                "原因": policy.rationale,
+                "操作": policy.user_action,
+            }
+            for policy in policies
+        ]
+    )
+    st.dataframe(policy_frame, hide_index=True, use_container_width=True)
 
 
 def build_price_frame(snapshot: dict) -> pd.DataFrame:
@@ -1316,6 +1340,7 @@ def render_master_holdings() -> None:
     st.info(
         "大师持仓来自公开披露，通常有季度滞后，只适合学习风格和研究线索，不适合作为实时跟单依据。"
     )
+    st.caption(f"更新策略：{get_policy('大师持仓 / 共识塔').cadence_label} · {get_policy('大师持仓 / 共识塔').rationale}")
     render_consensus_holdings()
     render_master_cards()
 
@@ -1371,7 +1396,8 @@ def render_attention_page(provider: str, force_refresh: bool) -> None:
         """,
         unsafe_allow_html=True,
     )
-    st.caption(f"今日雷达日期：{today} · 默认每日更新一次 · 数据源：{provider}")
+    attention_policy = get_policy("推荐关注雷达")
+    st.caption(f"今日雷达日期：{today} · {attention_policy.cadence_label} · 数据源：{provider}")
 
     top = candidates[:6]
     if not top:
@@ -1450,8 +1476,10 @@ def main() -> None:
         if page == "大师持仓":
             st.caption("独立学习区：查看公开披露持仓，不依赖当前股票或 ETF。")
             st.caption("这些数据有披露滞后，只适合学习，不适合实时跟单。")
+            st.caption(f"更新：{get_policy('大师持仓 / 共识塔').cadence_label}")
         elif page == "推荐关注":
-            st.caption("每日关注雷达：综合大师共识和近期异动，每天更新一次。")
+            st.caption("每日关注雷达：综合大师共识和近期异动。")
+            st.caption(f"更新：{get_policy('推荐关注雷达').cadence_label}")
             provider = st.selectbox(
                 "数据源",
                 [DataProvider.YAHOO.value, DataProvider.GOOGLE_MOCK.value],
@@ -1523,6 +1551,7 @@ def main() -> None:
             )
             st.divider()
             st.caption("归因和大师批判按标的/周期每天缓存一次，减少噪音和 API 成本。")
+            render_update_policy_panel(compact=True)
             st.caption("组合文件解析仍是本地占位功能，不会上传你的个人文件。")
 
     if page == "大师持仓":
@@ -1533,15 +1562,18 @@ def main() -> None:
         render_attention_page(provider, force_attention_refresh)
         return
 
-    snapshot_key = f"{provider}:{ticker}:{timeframe}"
+    cache_day = date.today().isoformat()
+    snapshot_key = f"{provider}:{ticker}:{timeframe}:{cache_day}"
     needs_snapshot = (
         "snapshot" not in st.session_state
         or st.session_state.get("snapshot_key") != snapshot_key
         or "provider_symbol" not in st.session_state.get("snapshot", {})
     )
     if needs_snapshot or run_analysis:
+        if run_analysis:
+            load_market_snapshot.clear()
         with st.spinner("Loading market context"):
-            st.session_state.snapshot = load_market_snapshot(provider, ticker, timeframe)
+            st.session_state.snapshot = load_market_snapshot(provider, ticker, timeframe, cache_day)
             st.session_state.snapshot_key = snapshot_key
 
     snapshot = st.session_state.snapshot
@@ -1599,10 +1631,15 @@ def main() -> None:
     render_takeaway_panel(takeaway)
     render_metrics(metrics)
     cache_status = "复用今日缓存" if daily_analysis.cache_hit else "今日已生成"
-    st.caption(f"归因 / 大师批判：{cache_status} · 生成时间 {daily_analysis.generated_at}")
+    market_policy = get_policy("行情价格 / 新闻")
+    analysis_policy = get_policy("归因 / 大师批判")
+    st.caption(
+        f"行情 / 新闻：{market_policy.cadence_label} · 归因 / 大师批判：{analysis_policy.cadence_label}，"
+        f"{cache_status} · 生成时间 {daily_analysis.generated_at}"
+    )
 
-    overview_tab, dashboard_tab, news_tab, attribution_tab, critique_tab, data_tab = st.tabs(
-        ["总览", "投资仪表盘", "新闻", "归因", "大师批判", "原始数据"]
+    overview_tab, dashboard_tab, news_tab, attribution_tab, critique_tab, policy_tab, data_tab = st.tabs(
+        ["总览", "投资仪表盘", "新闻", "归因", "大师批判", "更新节奏", "原始数据"]
     )
 
     with overview_tab:
@@ -1645,6 +1682,9 @@ def main() -> None:
 
     with critique_tab:
         render_critique_cards(critique)
+
+    with policy_tab:
+        render_update_policy_panel()
 
     with data_tab:
         st.subheader("新闻原始数据")
