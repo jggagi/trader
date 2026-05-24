@@ -7,6 +7,7 @@ from trader.analysis_layer.insights import (
     build_risk_snapshot,
     build_scenario_table,
     build_technical_snapshot,
+    build_weather_forecast,
     enrich_price_frame,
 )
 
@@ -56,3 +57,14 @@ def test_action_checklist_uses_position_context() -> None:
 
     assert len(checklist) == 4
     assert "输入你的 SPY 持仓市值" in checklist[-1]
+
+
+def test_weather_forecast_translates_trend_and_risk() -> None:
+    technical = build_technical_snapshot(_sample_frame())
+    risk = build_risk_snapshot(_sample_frame())
+    weather = build_weather_forecast(technical, risk)
+
+    assert weather["short_term"]["label"] in {"晴朗", "多云转晴"}
+    assert weather["long_term"]["label"] == "晴朗"
+    assert weather["risk_weather"]["label"] == "晴朗"
+    assert "短期" in weather["summary"]

@@ -20,6 +20,7 @@ from trader.analysis_layer.insights import (
     build_risk_snapshot,
     build_scenario_table,
     build_technical_snapshot,
+    build_weather_forecast,
     enrich_price_frame,
 )
 from trader.data_layer.etf_catalog import get_markets, get_presets, get_styles
@@ -393,6 +394,44 @@ def inject_styles() -> None:
             justify-content: space-between;
             color: var(--muted);
             font-size: 0.74rem;
+        }
+
+        .weather-stack {
+            display: grid;
+            gap: 0.62rem;
+            margin-top: 0.8rem;
+        }
+
+        .weather-row {
+            display: grid;
+            grid-template-columns: 2.1rem minmax(0, 1fr);
+            gap: 0.58rem;
+            align-items: center;
+            padding: 0.62rem;
+            border: 1px solid rgba(23, 33, 43, 0.08);
+            border-radius: 8px;
+            background: rgba(247,250,251,0.9);
+        }
+
+        .weather-icon {
+            color: var(--teal);
+            font-size: 1.45rem;
+            line-height: 1;
+            text-align: center;
+        }
+
+        .weather-label {
+            color: var(--ink);
+            font-size: 0.94rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .weather-detail {
+            color: var(--muted);
+            font-size: 0.76rem;
+            line-height: 1.35;
+            margin-top: 0.16rem;
         }
 
         .metric-card {
@@ -1141,13 +1180,28 @@ def render_etf_catalog_preview(presets) -> None:
     )
 
 
-def render_overview_risk_panel(technical: dict, risk: dict) -> None:
+def render_overview_risk_panel(technical: dict, risk: dict, weather: dict) -> None:
+    weather_rows = "".join(
+        '<div class="weather-row">'
+        f'<div class="weather-icon">{html.escape(item["icon"])}</div>'
+        "<div>"
+        f'<div class="weather-label">{html.escape(label)} · {html.escape(item["label"])} · {html.escape(item["tone"])}</div>'
+        f'<div class="weather-detail">{html.escape(item["detail"])}</div>'
+        "</div>"
+        "</div>"
+        for label, item in (
+            ("短期", weather["short_term"]),
+            ("长期", weather["long_term"]),
+            ("风险", weather["risk_weather"]),
+        )
+    )
     st.markdown(
         f"""
         <div class="risk-meter">
-            <div class="decision-label">趋势 / 风险雷达</div>
-            <div class="insight-value">{html.escape(technical["trend_label"])}</div>
+            <div class="decision-label">投资天气雷达</div>
+            <div class="insight-value">{html.escape(weather["summary"])}</div>
             <div class="insight-detail">{html.escape(technical["trend_detail"])}</div>
+            <div class="weather-stack">{weather_rows}</div>
             <div class="risk-track"></div>
             <div class="risk-label-row"><span>温和</span><span>中等</span><span>偏高</span></div>
             <div class="insight-detail" style="margin-top:0.75rem;">
@@ -1503,6 +1557,7 @@ def main() -> None:
     takeaway = build_plain_language_takeaway(metrics, snapshot["timeframe"], snapshot["news"])
     technical = build_technical_snapshot(price_frame)
     risk = build_risk_snapshot(price_frame)
+    weather = build_weather_forecast(technical, risk)
     checklist = build_action_checklist(
         technical=technical,
         risk=risk,
@@ -1560,7 +1615,7 @@ def main() -> None:
                 render_price_chart(price_frame)
                 st.markdown("</div>", unsafe_allow_html=True)
             with risk_col:
-                render_overview_risk_panel(technical, risk)
+                render_overview_risk_panel(technical, risk, weather)
         st.subheader("最近新闻线索")
         render_mini_news(snapshot["news"])
 

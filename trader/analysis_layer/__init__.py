@@ -4,6 +4,7 @@ from trader.analysis_layer.insights import (
     build_risk_snapshot,
     build_scenario_table,
     build_technical_snapshot,
+    build_weather_forecast,
     enrich_price_frame,
 )
 
@@ -13,6 +14,6 @@ __all__ = [
     "build_risk_snapshot",
     "build_scenario_table",
     "build_technical_snapshot",
+    "build_weather_forecast",
     "enrich_price_frame",
 ]
-
