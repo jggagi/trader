@@ -1249,6 +1249,7 @@ def render_framework_cards(frameworks) -> None:
             '<div class="framework-item">'
             f'<div class="framework-item-label">{html.escape(item.label)} · {html.escape(item.assessment)}</div>'
             f'<div class="insight-detail">{html.escape(item.learning_prompt)}</div>'
+            f'<div class="framework-read" style="margin-bottom:0;">{html.escape(item.simulated_answer)}</div>'
             "</div>"
             for item in framework.items
         )
