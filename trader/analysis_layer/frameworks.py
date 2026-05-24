@@ -15,6 +15,8 @@ class FrameworkItem:
 class InvestmentFramework:
     name: str
     subtitle: str
+    applicability: str
+    applicability_reason: str
     philosophy: str
     current_read: str
     items: list[FrameworkItem]
@@ -29,10 +31,58 @@ def build_investment_frameworks(
     risk: dict[str, Any],
     weather: dict[str, Any],
 ) -> list[InvestmentFramework]:
-    return [
-        build_dalio_framework(snapshot=snapshot, metrics=metrics, technical=technical, risk=risk, weather=weather),
-        build_buffett_munger_framework(snapshot=snapshot, metrics=metrics, technical=technical, risk=risk),
-    ]
+    asset_profile = classify_asset(snapshot)
+    frameworks: list[InvestmentFramework] = []
+    if _should_apply_dalio(asset_profile):
+        frameworks.append(
+            build_dalio_framework(
+                snapshot=snapshot,
+                metrics=metrics,
+                technical=technical,
+                risk=risk,
+                weather=weather,
+                applicability_reason=_dalio_applicability_reason(asset_profile),
+            )
+        )
+    if _should_apply_buffett_munger(asset_profile):
+        frameworks.append(
+            build_buffett_munger_framework(
+                snapshot=snapshot,
+                metrics=metrics,
+                technical=technical,
+                risk=risk,
+                applicability_reason=_value_applicability_reason(asset_profile),
+            )
+        )
+    return frameworks
+
+
+def classify_asset(snapshot: dict) -> dict[str, str | bool]:
+    ticker = str(snapshot.get("provider_symbol") or snapshot.get("ticker") or "").upper()
+    market = str(snapshot.get("market") or "")
+    query = str(snapshot.get("query") or ticker).upper()
+    is_known_etf = bool(snapshot.get("selected_preset_symbol")) or _looks_like_etf(ticker, query)
+    style = str(snapshot.get("selected_preset_style") or "")
+    theme = str(snapshot.get("selected_preset_theme") or "")
+    if is_known_etf:
+        if style == "大盘核心" or theme == "大盘":
+            asset_type = "broad_etf"
+        elif style == "低波红利":
+            asset_type = "dividend_factor_etf"
+        elif style in {"科技成长", "成长"}:
+            asset_type = "growth_or_sector_etf"
+        else:
+            asset_type = "etf"
+    else:
+        asset_type = "stock"
+    return {
+        "asset_type": asset_type,
+        "ticker": ticker or query,
+        "market": market,
+        "style": style,
+        "theme": theme,
+        "is_etf": is_known_etf,
+    }
 
 
 def build_dalio_framework(
@@ -42,6 +92,7 @@ def build_dalio_framework(
     technical: dict[str, Any],
     risk: dict[str, Any],
     weather: dict[str, Any],
+    applicability_reason: str = "适合用来理解宏观环境、周期位置和组合分散。",
 ) -> InvestmentFramework:
     market = snapshot.get("market", "Unknown")
     risk_label = risk.get("risk_label", "数据不足")
@@ -51,6 +102,8 @@ def build_dalio_framework(
     return InvestmentFramework(
         name="Ray Dalio 宏观周期框架",
         subtitle="周期、债务、通胀、政策与分散",
+        applicability="适用",
+        applicability_reason=applicability_reason,
         philosophy="先判断自己暴露在哪类宏观环境里，再决定是否需要分散、再平衡或降低单一风险。",
         current_read=current_read,
         items=[
@@ -89,6 +142,7 @@ def build_buffett_munger_framework(
     metrics: dict[str, Any],
     technical: dict[str, Any],
     risk: dict[str, Any],
+    applicability_reason: str = "适合用来检查生意质量、护城河、现金流和安全边际。",
 ) -> InvestmentFramework:
     ticker = snapshot.get("ticker", "Unknown")
     move_pct = metrics.get("move_pct_raw")
@@ -96,6 +150,8 @@ def build_buffett_munger_framework(
     return InvestmentFramework(
         name="Buffett-Munger 价值投资框架",
         subtitle="好生意、护城河、现金流、安全边际与心理纪律",
+        applicability="适用",
+        applicability_reason=applicability_reason,
         philosophy="先判断是不是值得长期拥有的好生意，再判断价格是否给了足够安全边际。",
         current_read=current_read,
         items=[
@@ -161,3 +217,57 @@ def _format_optional_pct(value: float | None) -> str:
     if value is None:
         return "N/A"
     return f"{value:+.2f}%"
+
+
+def _looks_like_etf(ticker: str, query: str) -> bool:
+    known_etfs = {
+        "SPY",
+        "VOO",
+        "QQQ",
+        "QQQM",
+        "VGT",
+        "XLK",
+        "VUG",
+        "SCHG",
+        "IWF",
+        "SMH",
+        "USMV",
+        "SPLV",
+        "SPHD",
+        "SCHD",
+        "VIG",
+        "DGRO",
+    }
+    return ticker in known_etfs or query in known_etfs
+
+
+def _should_apply_dalio(asset_profile: dict[str, str | bool]) -> bool:
+    return True
+
+
+def _should_apply_buffett_munger(asset_profile: dict[str, str | bool]) -> bool:
+    return asset_profile["asset_type"] in {"stock", "growth_or_sector_etf", "dividend_factor_etf"}
+
+
+def _dalio_applicability_reason(asset_profile: dict[str, str | bool]) -> str:
+    asset_type = asset_profile["asset_type"]
+    if asset_type == "stock":
+        return "个股也会受到利率、信用、通胀和市场风险偏好的影响；此框架作为宏观背景使用。"
+    if asset_type == "broad_etf":
+        return "宽基 ETF 本质是资产配置工具，非常适合用宏观周期和风险平衡框架分析。"
+    if asset_type == "growth_or_sector_etf":
+        return "成长/行业 ETF 对利率、流动性和风险偏好敏感，适合用宏观框架拆解波动。"
+    if asset_type == "dividend_factor_etf":
+        return "红利/低波 ETF 常被用作防守或现金流暴露，适合放进风险平衡框架。"
+    return "ETF 适合先放到宏观和组合配置框架里理解。"
+
+
+def _value_applicability_reason(asset_profile: dict[str, str | bool]) -> str:
+    asset_type = asset_profile["asset_type"]
+    if asset_type == "stock":
+        return "个股可以直接分析商业模式、护城河、现金流和管理层纪律。"
+    if asset_type == "growth_or_sector_etf":
+        return "行业/成长 ETF 不能像单一公司那样估值，但可以检查底层行业质量、集中度和长期现金流质量。"
+    if asset_type == "dividend_factor_etf":
+        return "红利/低波 ETF 可用价值框架检查股息质量、成分股稳定性和是否只是高股息陷阱。"
+    return "此品类不适合完整套用单一公司价值投资框架。"

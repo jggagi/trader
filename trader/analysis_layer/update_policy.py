@@ -35,6 +35,13 @@ UPDATE_POLICIES = [
         user_action="重大新闻后可点击“重新生成今日归因/批判”。",
     ),
     UpdatePolicy(
+        source="投资框架分析",
+        cadence="daily",
+        cadence_label="每日更新",
+        rationale="框架本身稳定，但应用到具体标的时需要读取当天价格、趋势、风险和投资天气。",
+        user_action="随行情/新闻日更自动重算；换标的或周期也会即时重算。",
+    ),
+    UpdatePolicy(
         source="大师持仓 / 共识塔",
         cadence="weekly",
         cadence_label="每周复核",

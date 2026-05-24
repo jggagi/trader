@@ -801,7 +801,14 @@ def inject_styles() -> None:
 
 
 @st.cache_data(ttl=86400, show_spinner=False)
-def load_market_snapshot(provider: str, ticker: str, timeframe: str, cache_day: str) -> dict:
+def load_market_snapshot(
+    provider: str,
+    ticker: str,
+    timeframe: str,
+    cache_day: str,
+    selected_preset_style: str | None = None,
+    selected_preset_theme: str | None = None,
+) -> dict:
     del cache_day
     errors: list[str] = []
     symbol = resolve_symbol(ticker)
@@ -824,6 +831,9 @@ def load_market_snapshot(provider: str, ticker: str, timeframe: str, cache_day: 
         "currency_symbol": symbol.currency_symbol,
         "symbol_note": symbol.note,
         "timeframe": timeframe,
+        "selected_preset_symbol": ticker if selected_preset_style else None,
+        "selected_preset_style": selected_preset_style,
+        "selected_preset_theme": selected_preset_theme,
         "prices": [point.model_dump() for point in prices],
         "news": [item.model_dump() for item in news],
         "errors": errors,
@@ -881,7 +891,7 @@ def get_daily_analysis(
 def render_update_policy_panel(compact: bool = False) -> None:
     policies = get_update_policies()
     if compact:
-        st.caption("更新节奏：行情/新闻日更 · 推荐关注日更 · 归因/批判日更 · 大师持仓周更 · ETF 目录月更")
+        st.caption("更新节奏：行情/新闻日更 · 推荐关注日更 · 归因/批判日更 · 投资框架日更 · 大师持仓周更 · ETF 目录月更")
         return
 
     st.subheader("数据更新节奏")
@@ -1247,6 +1257,8 @@ def render_framework_cards(frameworks) -> None:
             '<div class="framework-card">'
             f'<div class="framework-title">{html.escape(framework.name)}</div>'
             f'<div class="framework-subtitle">{html.escape(framework.subtitle)}</div>'
+            f'<div class="tag-row"><span class="tag">{html.escape(framework.applicability)}</span></div>'
+            f'<div class="insight-detail" style="margin-top:0.5rem;">适用原因：{html.escape(framework.applicability_reason)}</div>'
             f'<div class="insight-detail" style="margin-top:0.55rem;">{html.escape(framework.philosophy)}</div>'
             f'<div class="framework-read">{html.escape(framework.current_read)}</div>'
             f"{items_html}"
@@ -1595,9 +1607,13 @@ def main() -> None:
             )
             if selected_preset:
                 ticker = selected_preset.symbol
+                selected_preset_style = selected_preset.style
+                selected_preset_theme = selected_preset.theme
                 st.caption(f"{selected_preset.market} · {selected_preset.style} · {selected_preset.theme} · {selected_preset.note}")
             else:
                 ticker = st.text_input("标的代码", value=default_ticker).strip().upper() or default_ticker
+                selected_preset_style = None
+                selected_preset_theme = None
             with st.expander("查看当前 ETF 列表", expanded=False):
                 render_etf_catalog_preview(filtered_presets)
             timeframe = st.selectbox(
@@ -1642,7 +1658,7 @@ def main() -> None:
         return
 
     cache_day = date.today().isoformat()
-    snapshot_key = f"{provider}:{ticker}:{timeframe}:{cache_day}"
+    snapshot_key = f"{provider}:{ticker}:{timeframe}:{selected_preset_style}:{selected_preset_theme}:{cache_day}"
     needs_snapshot = (
         "snapshot" not in st.session_state
         or st.session_state.get("snapshot_key") != snapshot_key
@@ -1652,7 +1668,14 @@ def main() -> None:
         if run_analysis:
             load_market_snapshot.clear()
         with st.spinner("Loading market context"):
-            st.session_state.snapshot = load_market_snapshot(provider, ticker, timeframe, cache_day)
+            st.session_state.snapshot = load_market_snapshot(
+                provider,
+                ticker,
+                timeframe,
+                cache_day,
+                selected_preset_style,
+                selected_preset_theme,
+            )
             st.session_state.snapshot_key = snapshot_key
 
     snapshot = st.session_state.snapshot
@@ -1756,7 +1779,10 @@ def main() -> None:
 
     with frameworks_tab:
         st.subheader("两套核心投资框架")
-        st.caption("用于学习和复盘：Dalio 框架帮你看宏观环境，Buffett-Munger 框架帮你回到生意质量和安全边际。")
+        st.caption(
+            f"用于学习和复盘：按标的品类自动选择适用框架。"
+            f"{get_policy('投资框架分析').cadence_label}，随当天行情、趋势、风险和投资天气重算。"
+        )
         render_framework_cards(frameworks)
 
     with news_tab:
