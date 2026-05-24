@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import os
+from datetime import date
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -12,6 +13,7 @@ from trader.agent_layer.attribution.engine import AttributionEngine
 from trader.agent_layer.critique.engine import MasterCritiqueEngine
 from trader.agent_layer.daily_cache import DailyAnalysis, build_daily_cache_key, load_daily_analysis, save_daily_analysis
 from trader.agent_layer.llm import build_default_llm_client
+from trader.analysis_layer.attention import AttentionCandidate, build_attention_candidates
 from trader.analysis_layer.insights import (
     build_action_checklist,
     build_markdown_report,
@@ -531,6 +533,45 @@ def inject_styles() -> None:
             margin-top: 0.35rem;
         }
 
+        .attention-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 0.75rem;
+            margin: 0.9rem 0 1rem;
+        }
+
+        .attention-card {
+            background: rgba(255,255,255,0.96);
+            border: 1px solid rgba(23, 33, 43, 0.08);
+            border-radius: 8px;
+            padding: 0.9rem;
+            box-shadow: 0 10px 24px rgba(16, 24, 32, 0.06);
+            min-height: 10rem;
+        }
+
+        .attention-score {
+            color: var(--teal);
+            font-size: 0.78rem;
+            font-weight: 820;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .attention-move {
+            color: var(--ink);
+            font-size: 1.45rem;
+            font-weight: 850;
+            line-height: 1.1;
+            margin-top: 0.35rem;
+        }
+
+        .attention-symbol {
+            color: var(--ink);
+            font-size: 1rem;
+            font-weight: 820;
+            margin-top: 0.28rem;
+        }
+
         .etf-card {
             background: rgba(255,255,255,0.94);
             border: 1px solid rgba(23, 33, 43, 0.08);
@@ -583,7 +624,7 @@ def inject_styles() -> None:
             box-shadow: 0 10px 24px rgba(16, 24, 32, 0.06);
         }
 
-        .news-card:hover, .etf-card:hover, .insight-card:hover, .master-card:hover, .consensus-card:hover {
+        .news-card:hover, .etf-card:hover, .insight-card:hover, .master-card:hover, .consensus-card:hover, .attention-card:hover {
             border-color: rgba(8, 127, 140, 0.28);
             box-shadow: 0 14px 30px rgba(16, 24, 32, 0.09);
         }
@@ -694,6 +735,20 @@ def load_market_snapshot(provider: str, ticker: str, timeframe: str) -> dict:
         "news": [item.model_dump() for item in news],
         "errors": errors,
     }
+
+
+@st.cache_data(ttl=86400, show_spinner=False)
+def load_attention_candidates(provider: str, cache_day: str) -> list[AttentionCandidate]:
+    del cache_day
+    consensus = get_consensus_holdings()
+    fetcher = create_market_data_fetcher(DataProvider(provider))
+    prices_by_symbol = {}
+    for item in consensus:
+        try:
+            prices_by_symbol[item.symbol] = fetcher.get_historical_prices(item.symbol, "5d")
+        except Exception:
+            prices_by_symbol[item.symbol] = []
+    return build_attention_candidates(consensus, prices_by_symbol)
 
 
 def get_daily_analysis(
@@ -1236,18 +1291,124 @@ def render_master_holdings() -> None:
     st.link_button("打开公开来源", portfolio.source_url, use_container_width=True)
 
 
+def format_attention_move(value: float | None) -> str:
+    if value is None:
+        return "N/A"
+    return f"{value:+.2f}%"
+
+
+def render_attention_page(provider: str, force_refresh: bool) -> None:
+    today = date.today().isoformat()
+    if force_refresh:
+        load_attention_candidates.clear()
+
+    with st.spinner("Loading daily attention radar"):
+        candidates = load_attention_candidates(provider, today)
+
+    st.markdown(
+        """
+        <div class="consensus-hero">
+            <div class="consensus-title">推荐关注 · 每日雷达</div>
+            <div class="consensus-subtitle">
+                综合大师共识和最近 5 个交易日价格异动，筛出今天最值得打开研究笔记的标的。
+                这是长期研究队列，不是短线交易信号。
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.caption(f"今日雷达日期：{today} · 默认每日更新一次 · 数据源：{provider}")
+
+    top = candidates[:6]
+    if not top:
+        st.warning("暂时没有可用关注候选。可以稍后重试，或切换数据源。")
+        return
+
+    figure = go.Figure(
+        go.Bar(
+            x=[item.attention_score for item in top],
+            y=[f"{item.symbol} · {item.name}" for item in top],
+            orientation="h",
+            marker_color=["#087f8c", "#2463eb", "#15803d", "#6d5dfc", "#b7791f", "#65717d"][: len(top)],
+            text=[format_attention_move(item.move_pct) for item in top],
+            textposition="auto",
+            hovertemplate="<b>%{y}</b><br>关注分: %{x}<br>5日异动: %{text}<extra></extra>",
+        )
+    )
+    figure.update_layout(
+        height=340,
+        yaxis={"autorange": "reversed"},
+        margin={"l": 8, "r": 8, "t": 8, "b": 8},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font={"color": "#16202a", "family": "Inter, -apple-system, BlinkMacSystemFont, sans-serif"},
+        xaxis_title="关注分",
+    )
+    st.plotly_chart(figure, use_container_width=True)
+
+    cards = []
+    for item in top:
+        tags = "".join(
+            f'<span class="tag">{html.escape(tag)}</span>'
+            for tag in (f"{item.master_count} 位大师", f"共识 {item.consensus_score:.1f}")
+        )
+        cards.append(
+            '<div class="attention-card">'
+            f'<div class="attention-score">Attention {item.attention_score:.1f}</div>'
+            f'<div class="attention-move">{html.escape(format_attention_move(item.move_pct))}</div>'
+            f'<div class="attention-symbol">{html.escape(item.symbol)} · {html.escape(item.name)}</div>'
+            f'<div class="tag-row">{tags}</div>'
+            f'<div class="consensus-meta">为什么关注：{html.escape(item.action_hint)}</div>'
+            f'<div class="consensus-meta">研究线索：{html.escape(item.reason)}</div>'
+            "</div>"
+        )
+    st.markdown(f'<div class="attention-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+
+    frame = pd.DataFrame(
+        [
+            {
+                "代码": item.symbol,
+                "名称": item.name,
+                "关注分": item.attention_score,
+                "5日异动": format_attention_move(item.move_pct),
+                "最新价": item.latest_close,
+                "大师人数": item.master_count,
+                "共识分": item.consensus_score,
+                "关注原因": item.action_hint,
+                "研究线索": item.reason,
+            }
+            for item in candidates
+        ]
+    )
+    st.subheader("完整关注清单")
+    st.dataframe(frame, hide_index=True, use_container_width=True)
+
+
 def main() -> None:
     inject_styles()
     configure_streamlit_secrets()
 
     with st.sidebar:
         st.header("导航")
-        page = st.radio("页面", ["市场分析", "大师持仓"], horizontal=True)
+        page = st.radio("页面", ["市场分析", "大师持仓", "推荐关注"])
         st.divider()
 
         if page == "大师持仓":
             st.caption("独立学习区：查看公开披露持仓，不依赖当前股票或 ETF。")
             st.caption("这些数据有披露滞后，只适合学习，不适合实时跟单。")
+        elif page == "推荐关注":
+            st.caption("每日关注雷达：综合大师共识和近期异动，每天更新一次。")
+            provider = st.selectbox(
+                "数据源",
+                [DataProvider.YAHOO.value, DataProvider.GOOGLE_MOCK.value],
+                index=0,
+                format_func=lambda value: f"{value} · {PROVIDER_HELP[value]}",
+            )
+            force_attention_refresh = st.button(
+                "重新生成今日关注雷达",
+                type="primary",
+                use_container_width=True,
+            )
         else:
             st.header("分析设置")
             st.caption("输入美股、A股、港股或日股代码。例：SPY、600519、HK:700、0700.HK、JP:7203、7203.T。")
@@ -1312,6 +1473,10 @@ def main() -> None:
 
     if page == "大师持仓":
         render_master_holdings()
+        return
+
+    if page == "推荐关注":
+        render_attention_page(provider, force_attention_refresh)
         return
 
     snapshot_key = f"{provider}:{ticker}:{timeframe}"
