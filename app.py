@@ -10,6 +10,7 @@ import streamlit as st
 
 from trader.agent_layer.attribution.engine import AttributionEngine
 from trader.agent_layer.critique.engine import MasterCritiqueEngine
+from trader.agent_layer.daily_cache import DailyAnalysis, build_daily_cache_key, load_daily_analysis, save_daily_analysis
 from trader.agent_layer.llm import build_default_llm_client
 from trader.analysis_layer.insights import (
     build_action_checklist,
@@ -695,6 +696,40 @@ def load_market_snapshot(provider: str, ticker: str, timeframe: str) -> dict:
     }
 
 
+def get_daily_analysis(
+    *,
+    llm_client,
+    snapshot: dict,
+    portfolio_state: dict,
+    force_refresh: bool = False,
+) -> DailyAnalysis:
+    cache_key = build_daily_cache_key(
+        provider=snapshot["provider"],
+        ticker=snapshot["provider_symbol"],
+        timeframe=snapshot["timeframe"],
+    )
+    can_cache = not portfolio_state
+    if can_cache and not force_refresh:
+        cached = load_daily_analysis(cache_key)
+        if cached:
+            return cached
+
+    attribution = AttributionEngine(llm_client).run(snapshot)
+    critique = MasterCritiqueEngine(llm_client).run(
+        market_snapshot=snapshot,
+        portfolio_state=portfolio_state,
+        attribution=attribution,
+    )
+    if not can_cache:
+        return DailyAnalysis(
+            attribution=attribution,
+            critique=critique,
+            generated_at="本次会话",
+            cache_hit=False,
+        )
+    return save_daily_analysis(cache_key=cache_key, attribution=attribution, critique=critique)
+
+
 def build_price_frame(snapshot: dict) -> pd.DataFrame:
     frame = pd.DataFrame(snapshot["prices"])
     if frame.empty:
@@ -1265,18 +1300,30 @@ def main() -> None:
                 help="只在本地用于估算情景影响，不会上传。",
             )
             shock_pct = st.slider("压力/乐观情景幅度", min_value=3, max_value=25, value=10, step=1)
-            run_analysis = st.button("刷新分析", type="primary", use_container_width=True)
+            run_analysis = st.button("刷新行情与新闻", type="primary", use_container_width=True)
+            force_daily_analysis = st.button(
+                "重新生成今日归因/批判",
+                use_container_width=True,
+                help="长期投资默认一天生成一次。只有重大新闻或你想重跑 LLM 时再点击。",
+            )
             st.divider()
+            st.caption("归因和大师批判按标的/周期每天缓存一次，减少噪音和 API 成本。")
             st.caption("组合文件解析仍是本地占位功能，不会上传你的个人文件。")
 
     if page == "大师持仓":
         render_master_holdings()
         return
 
-    needs_snapshot = "snapshot" not in st.session_state or "provider_symbol" not in st.session_state.get("snapshot", {})
+    snapshot_key = f"{provider}:{ticker}:{timeframe}"
+    needs_snapshot = (
+        "snapshot" not in st.session_state
+        or st.session_state.get("snapshot_key") != snapshot_key
+        or "provider_symbol" not in st.session_state.get("snapshot", {})
+    )
     if needs_snapshot or run_analysis:
         with st.spinner("Loading market context"):
             st.session_state.snapshot = load_market_snapshot(provider, ticker, timeframe)
+            st.session_state.snapshot_key = snapshot_key
 
     snapshot = st.session_state.snapshot
     price_frame = build_price_frame(snapshot)
@@ -1313,6 +1360,15 @@ def main() -> None:
         risk=risk,
         checklist=checklist,
     )
+    with st.spinner("Preparing daily attribution and critique"):
+        daily_analysis = get_daily_analysis(
+            llm_client=llm_client,
+            snapshot=snapshot,
+            portfolio_state=portfolio_state,
+            force_refresh=force_daily_analysis,
+        )
+    attribution = daily_analysis.attribution
+    critique = daily_analysis.critique
 
     render_header(snapshot, metrics, llm_available=llm_client.__class__.__name__ != "LocalFallbackLLMClient")
     render_runtime_notice()
@@ -1322,6 +1378,8 @@ def main() -> None:
         st.caption(snapshot["symbol_note"])
     render_takeaway_panel(takeaway)
     render_metrics(metrics)
+    cache_status = "复用今日缓存" if daily_analysis.cache_hit else "今日已生成"
+    st.caption(f"归因 / 大师批判：{cache_status} · 生成时间 {daily_analysis.generated_at}")
 
     overview_tab, dashboard_tab, news_tab, attribution_tab, critique_tab, data_tab = st.tabs(
         ["总览", "投资仪表盘", "新闻", "归因", "大师批判", "原始数据"]
@@ -1357,8 +1415,6 @@ def main() -> None:
         render_news_cards(snapshot["news"])
 
     with attribution_tab:
-        with st.spinner("Synthesizing attribution"):
-            attribution = AttributionEngine(llm_client).run(snapshot)
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.subheader("客观归因")
         st.write(attribution.narrative)
@@ -1368,12 +1424,6 @@ def main() -> None:
             st.dataframe(pd.DataFrame([item.model_dump() for item in attribution.evidence]), hide_index=True)
 
     with critique_tab:
-        with st.spinner("Running roundtable"):
-            critique = MasterCritiqueEngine(llm_client).run(
-                market_snapshot=snapshot,
-                portfolio_state=portfolio_state,
-                attribution=attribution,
-            )
         render_critique_cards(critique)
 
     with data_tab:
