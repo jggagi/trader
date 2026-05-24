@@ -1122,6 +1122,77 @@ def render_price_chart(frame: pd.DataFrame) -> None:
     st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
 
+def render_return_heatmap(frame: pd.DataFrame) -> None:
+    enriched = enrich_price_frame(frame)
+    if enriched.empty or "daily_return" not in enriched:
+        st.info("暂无足够数据绘制收益热力图。")
+        return
+    heatmap_frame = enriched.dropna(subset=["daily_return"]).copy()
+    if heatmap_frame.empty:
+        st.info("暂无足够数据绘制收益热力图。")
+        return
+    heatmap_frame["week"] = heatmap_frame["date"].dt.isocalendar().week.astype(int)
+    heatmap_frame["weekday"] = heatmap_frame["date"].dt.day_name().str[:3]
+    weekday_order = ["Mon", "Tue", "Wed", "Thu", "Fri"]
+    pivot = (
+        heatmap_frame.pivot_table(index="weekday", columns="week", values="daily_return", aggfunc="sum")
+        .reindex(weekday_order)
+        .fillna(0)
+        * 100
+    )
+    fig = go.Figure(
+        go.Heatmap(
+            z=pivot.values,
+            x=[str(column) for column in pivot.columns],
+            y=pivot.index,
+            colorscale=[[0, "#b42318"], [0.5, "#f7fafb"], [1, "#15803d"]],
+            zmid=0,
+            colorbar={"title": "日收益"},
+            hovertemplate="第 %{x} 周 · %{y}<br>收益: %{z:.2f}%<extra></extra>",
+        )
+    )
+    fig.update_layout(
+        height=260,
+        margin={"l": 8, "r": 8, "t": 8, "b": 8},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font={"color": "#16202a"},
+        xaxis_title="周序号",
+        yaxis_title="交易日",
+    )
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+
+def render_drawdown_chart(frame: pd.DataFrame) -> None:
+    enriched = enrich_price_frame(frame)
+    if enriched.empty or "drawdown" not in enriched:
+        st.info("暂无足够数据绘制回撤曲线。")
+        return
+    fig = go.Figure(
+        go.Scatter(
+            x=enriched["date"],
+            y=enriched["drawdown"] * 100,
+            fill="tozeroy",
+            mode="lines",
+            line={"color": "#b42318", "width": 1.8},
+            fillcolor="rgba(180, 35, 24, 0.14)",
+            name="Drawdown",
+            hovertemplate="%{x|%Y-%m-%d}<br>回撤: %{y:.2f}%<extra></extra>",
+        )
+    )
+    fig.update_layout(
+        height=240,
+        margin={"l": 8, "r": 8, "t": 8, "b": 8},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(255,255,255,0.72)",
+        font={"color": "#16202a"},
+        yaxis_title="回撤",
+    )
+    fig.update_yaxes(ticksuffix="%", gridcolor="rgba(102,112,124,0.16)")
+    fig.update_xaxes(showgrid=False)
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+
 def render_header(snapshot: dict, metrics: dict, llm_available: bool) -> None:
     llm_label = "AI 已连接" if llm_available else "本地占位分析"
     timeframe = TIMEFRAME_OPTIONS.get(snapshot["timeframe"], snapshot["timeframe"])
@@ -1298,6 +1369,70 @@ def render_investment_dashboard(technical: dict, risk: dict, checklist: list[str
     st.markdown(f'<div class="checklist">{checklist_html}</div>', unsafe_allow_html=True)
 
 
+def render_risk_radar(technical: dict, risk: dict) -> None:
+    volatility = min((risk.get("annualized_volatility") or 0) / 35 * 100, 100)
+    drawdown = min(abs(risk.get("max_drawdown") or 0) / 20 * 100, 100)
+    ma20_pressure = min(abs(technical.get("distance_to_ma20") or 0) / 10 * 100, 100)
+    ma50_pressure = min(abs(technical.get("distance_to_ma50") or 0) / 15 * 100, 100)
+    categories = ["波动", "回撤", "短期均线压力", "长期均线压力"]
+    values = [volatility, drawdown, ma20_pressure, ma50_pressure]
+    fig = go.Figure(
+        go.Scatterpolar(
+            r=values + [values[0]],
+            theta=categories + [categories[0]],
+            fill="toself",
+            fillcolor="rgba(8,127,140,0.18)",
+            line={"color": "#087f8c", "width": 2},
+            name="风险轮廓",
+            hovertemplate="%{theta}: %{r:.1f}<extra></extra>",
+        )
+    )
+    fig.update_layout(
+        height=330,
+        margin={"l": 16, "r": 16, "t": 16, "b": 16},
+        paper_bgcolor="rgba(0,0,0,0)",
+        polar={
+            "radialaxis": {"visible": True, "range": [0, 100], "gridcolor": "rgba(102,112,124,0.18)"},
+            "angularaxis": {"gridcolor": "rgba(102,112,124,0.18)"},
+        },
+        font={"color": "#16202a"},
+        showlegend=False,
+    )
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+
+def render_scenario_waterfall(scenario_table: pd.DataFrame) -> None:
+    if scenario_table.empty:
+        return
+    changes = [
+        float(str(value).replace("%", "").replace("+", ""))
+        for value in scenario_table["价格变化"]
+    ]
+    fig = go.Figure(
+        go.Waterfall(
+            x=list(scenario_table["情景"]),
+            y=changes,
+            measure=["relative"] * len(changes),
+            connector={"line": {"color": "rgba(22,32,42,0.20)"}},
+            increasing={"marker": {"color": "#15803d"}},
+            decreasing={"marker": {"color": "#b42318"}},
+            text=[f"{value:+.1f}%" for value in changes],
+            textposition="outside",
+            hovertemplate="%{x}<br>价格变化: %{y:+.1f}%<extra></extra>",
+        )
+    )
+    fig.update_layout(
+        height=300,
+        margin={"l": 8, "r": 8, "t": 10, "b": 8},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(255,255,255,0.72)",
+        font={"color": "#16202a"},
+        yaxis_title="价格变化",
+    )
+    fig.update_yaxes(ticksuffix="%", gridcolor="rgba(102,112,124,0.16)")
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+
 def render_framework_cards(frameworks) -> None:
     cards = []
     for framework in frameworks:
@@ -1452,6 +1587,41 @@ def render_consensus_holdings() -> None:
     )
     st.plotly_chart(figure, use_container_width=True)
 
+    bubble = go.Figure(
+        go.Scatter(
+            x=[item.holder_count for item in consensus],
+            y=[item.score for item in consensus],
+            mode="markers+text",
+            text=[item.symbol for item in consensus],
+            textposition="top center",
+            marker={
+                "size": [max(18, item.score / 2) for item in consensus],
+                "color": [item.score for item in consensus],
+                "colorscale": "Teal",
+                "line": {"width": 1, "color": "rgba(22,32,42,0.18)"},
+                "showscale": True,
+                "colorbar": {"title": "共识分"},
+            },
+            hovertext=[
+                f"{item.symbol} · {item.name}<br>{item.holder_count} 位大师<br>{', '.join(item.masters)}<br>{item.note}"
+                for item in consensus
+            ],
+            hovertemplate="%{hovertext}<extra></extra>",
+        )
+    )
+    bubble.update_layout(
+        height=330,
+        margin={"l": 8, "r": 8, "t": 8, "b": 8},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(255,255,255,0.72)",
+        font={"color": "#16202a"},
+        xaxis_title="共同持有大师人数",
+        yaxis_title="共识分",
+    )
+    bubble.update_xaxes(dtick=1, gridcolor="rgba(102,112,124,0.16)")
+    bubble.update_yaxes(gridcolor="rgba(102,112,124,0.16)")
+    st.plotly_chart(bubble, use_container_width=True, config={"displayModeBar": False})
+
     cards = []
     for index, item in enumerate(top, start=1):
         tags = "".join(
@@ -1516,6 +1686,25 @@ def render_master_holdings() -> None:
             for item in portfolio.holdings
         ]
     )
+    treemap_frame = holdings_frame.copy()
+    treemap_frame["视觉权重"] = list(range(len(treemap_frame), 0, -1))
+    treemap = go.Figure(
+        go.Treemap(
+            labels=treemap_frame["代码"],
+            parents=[""] * len(treemap_frame),
+            values=treemap_frame["视觉权重"],
+            text=[f"{row['代码']}<br>{row['名称']}<br>{row['权重/位置']}" for _, row in treemap_frame.iterrows()],
+            textinfo="text",
+            marker={"colorscale": "Teal", "line": {"width": 1, "color": "white"}},
+            hovertemplate="%{label}<br>%{text}<extra></extra>",
+        )
+    )
+    treemap.update_layout(
+        height=300,
+        margin={"l": 4, "r": 4, "t": 4, "b": 4},
+        paper_bgcolor="rgba(0,0,0,0)",
+    )
+    st.plotly_chart(treemap, use_container_width=True, config={"displayModeBar": False})
     st.dataframe(holdings_frame, hide_index=True, use_container_width=True)
     st.warning(portfolio.caveat)
     st.link_button("打开公开来源", portfolio.source_url, use_container_width=True)
@@ -1576,6 +1765,42 @@ def render_attention_page(provider: str, force_refresh: bool) -> None:
         xaxis_title="关注分",
     )
     st.plotly_chart(figure, use_container_width=True)
+
+    scatter = go.Figure(
+        go.Scatter(
+            x=[item.consensus_score for item in candidates],
+            y=[item.move_pct or 0 for item in candidates],
+            mode="markers+text",
+            text=[item.symbol for item in candidates],
+            textposition="top center",
+            marker={
+                "size": [max(16, item.attention_score / 3) for item in candidates],
+                "color": [item.attention_score for item in candidates],
+                "colorscale": "Teal",
+                "line": {"width": 1, "color": "rgba(22,32,42,0.18)"},
+                "showscale": True,
+                "colorbar": {"title": "关注分"},
+            },
+            hovertext=[
+                f"{item.symbol} · {item.name}<br>共识分 {item.consensus_score:.1f}<br>5日异动 {format_attention_move(item.move_pct)}<br>{item.action_hint}"
+                for item in candidates
+            ],
+            hovertemplate="%{hovertext}<extra></extra>",
+        )
+    )
+    scatter.add_hline(y=0, line_dash="dot", line_color="rgba(22,32,42,0.28)")
+    scatter.update_layout(
+        height=360,
+        margin={"l": 8, "r": 8, "t": 8, "b": 8},
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(255,255,255,0.72)",
+        font={"color": "#16202a"},
+        xaxis_title="大师共识分",
+        yaxis_title="5日异动",
+    )
+    scatter.update_yaxes(ticksuffix="%", gridcolor="rgba(102,112,124,0.16)")
+    scatter.update_xaxes(gridcolor="rgba(102,112,124,0.16)")
+    st.plotly_chart(scatter, use_container_width=True, config={"displayModeBar": False})
 
     cards = []
     for item in top:
@@ -1831,12 +2056,22 @@ def main() -> None:
                 st.markdown("</div>", unsafe_allow_html=True)
             with risk_col:
                 render_overview_risk_panel(technical, risk, weather)
+            st.subheader("收益热力图")
+            render_return_heatmap(price_frame)
         st.subheader("最近新闻线索")
         render_mini_news(snapshot["news"])
 
     with dashboard_tab:
         render_investment_dashboard(technical, risk, checklist)
+        viz_col, drawdown_col = st.columns([1, 1])
+        with viz_col:
+            st.subheader("风险雷达")
+            render_risk_radar(technical, risk)
+        with drawdown_col:
+            st.subheader("回撤曲线")
+            render_drawdown_chart(price_frame)
         st.subheader("持仓情景推演")
+        render_scenario_waterfall(scenario_table)
         st.dataframe(scenario_table, hide_index=True, use_container_width=True)
         st.download_button(
             "下载本地 Markdown 报告",
