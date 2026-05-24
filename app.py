@@ -14,6 +14,7 @@ from trader.agent_layer.critique.engine import MasterCritiqueEngine
 from trader.agent_layer.daily_cache import DailyAnalysis, build_daily_cache_key, load_daily_analysis, save_daily_analysis
 from trader.agent_layer.llm import build_default_llm_client
 from trader.analysis_layer.attention import AttentionCandidate, build_attention_candidates
+from trader.analysis_layer.frameworks import build_investment_frameworks
 from trader.analysis_layer.insights import (
     build_action_checklist,
     build_markdown_report,
@@ -612,6 +613,57 @@ def inject_styles() -> None:
             margin-top: 0.28rem;
         }
 
+        .framework-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 0.9rem;
+            margin-top: 0.9rem;
+        }
+
+        .framework-card {
+            background: rgba(255,255,255,0.96);
+            border: 1px solid rgba(23, 33, 43, 0.08);
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 10px 24px rgba(16, 24, 32, 0.06);
+        }
+
+        .framework-title {
+            color: var(--ink);
+            font-size: 1.1rem;
+            font-weight: 840;
+            line-height: 1.18;
+        }
+
+        .framework-subtitle {
+            color: var(--teal);
+            font-size: 0.78rem;
+            font-weight: 760;
+            margin-top: 0.22rem;
+        }
+
+        .framework-read {
+            color: var(--ink);
+            background: var(--teal-soft);
+            border-radius: 8px;
+            padding: 0.68rem;
+            font-size: 0.9rem;
+            line-height: 1.45;
+            margin: 0.75rem 0;
+        }
+
+        .framework-item {
+            border-top: 1px solid rgba(23, 33, 43, 0.08);
+            padding-top: 0.65rem;
+            margin-top: 0.65rem;
+        }
+
+        .framework-item-label {
+            color: var(--ink);
+            font-size: 0.88rem;
+            font-weight: 800;
+        }
+
         .etf-card {
             background: rgba(255,255,255,0.94);
             border: 1px solid rgba(23, 33, 43, 0.08);
@@ -664,7 +716,7 @@ def inject_styles() -> None:
             box-shadow: 0 10px 24px rgba(16, 24, 32, 0.06);
         }
 
-        .news-card:hover, .etf-card:hover, .insight-card:hover, .master-card:hover, .consensus-card:hover, .attention-card:hover {
+        .news-card:hover, .etf-card:hover, .insight-card:hover, .master-card:hover, .consensus-card:hover, .attention-card:hover, .framework-card:hover {
             border-color: rgba(8, 127, 140, 0.28);
             box-shadow: 0 14px 30px rgba(16, 24, 32, 0.09);
         }
@@ -1180,6 +1232,33 @@ def render_investment_dashboard(technical: dict, risk: dict, checklist: list[str
     st.markdown(f'<div class="checklist">{checklist_html}</div>', unsafe_allow_html=True)
 
 
+def render_framework_cards(frameworks) -> None:
+    cards = []
+    for framework in frameworks:
+        items_html = "".join(
+            '<div class="framework-item">'
+            f'<div class="framework-item-label">{html.escape(item.label)} · {html.escape(item.assessment)}</div>'
+            f'<div class="insight-detail">{html.escape(item.learning_prompt)}</div>'
+            "</div>"
+            for item in framework.items
+        )
+        questions_html = "".join(f"<li>{html.escape(question)}</li>" for question in framework.next_questions)
+        cards.append(
+            '<div class="framework-card">'
+            f'<div class="framework-title">{html.escape(framework.name)}</div>'
+            f'<div class="framework-subtitle">{html.escape(framework.subtitle)}</div>'
+            f'<div class="insight-detail" style="margin-top:0.55rem;">{html.escape(framework.philosophy)}</div>'
+            f'<div class="framework-read">{html.escape(framework.current_read)}</div>'
+            f"{items_html}"
+            '<div class="framework-item">'
+            '<div class="framework-item-label">下一步自问</div>'
+            f'<ul class="insight-detail" style="margin-bottom:0;">{questions_html}</ul>'
+            "</div>"
+            "</div>"
+        )
+    st.markdown(f'<div class="framework-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+
+
 def render_etf_catalog_preview(presets) -> None:
     if not presets:
         st.info("当前筛选下没有 ETF。")
@@ -1590,6 +1669,13 @@ def main() -> None:
     technical = build_technical_snapshot(price_frame)
     risk = build_risk_snapshot(price_frame)
     weather = build_weather_forecast(technical, risk)
+    frameworks = build_investment_frameworks(
+        snapshot=snapshot,
+        metrics=metrics,
+        technical=technical,
+        risk=risk,
+        weather=weather,
+    )
     checklist = build_action_checklist(
         technical=technical,
         risk=risk,
@@ -1638,8 +1724,8 @@ def main() -> None:
         f"{cache_status} · 生成时间 {daily_analysis.generated_at}"
     )
 
-    overview_tab, dashboard_tab, news_tab, attribution_tab, critique_tab, policy_tab, data_tab = st.tabs(
-        ["总览", "投资仪表盘", "新闻", "归因", "大师批判", "更新节奏", "原始数据"]
+    overview_tab, dashboard_tab, frameworks_tab, news_tab, attribution_tab, critique_tab, policy_tab, data_tab = st.tabs(
+        ["总览", "投资仪表盘", "投资框架", "新闻", "归因", "大师批判", "更新节奏", "原始数据"]
     )
 
     with overview_tab:
@@ -1667,6 +1753,11 @@ def main() -> None:
             mime="text/markdown",
             use_container_width=True,
         )
+
+    with frameworks_tab:
+        st.subheader("两套核心投资框架")
+        st.caption("用于学习和复盘：Dalio 框架帮你看宏观环境，Buffett-Munger 框架帮你回到生意质量和安全边际。")
+        render_framework_cards(frameworks)
 
     with news_tab:
         render_news_cards(snapshot["news"])
