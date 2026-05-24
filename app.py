@@ -1276,24 +1276,27 @@ def render_etf_catalog_preview(presets) -> None:
     if not presets:
         st.info("当前筛选下没有 ETF。")
         return
-    cards = []
-    for item in presets:
-        tags = "".join(
-            f'<span class="tag">{html.escape(tag)}</span>'
-            for tag in (item.market, item.style, item.theme)
-        )
-        cards.append(
-            '<div class="etf-card">'
-            f'<div class="etf-symbol">{html.escape(item.symbol)}</div>'
-            f'<div class="etf-name">{html.escape(item.name)}</div>'
-            f'<div class="tag-row">{tags}</div>'
-            f'<div class="insight-detail" style="margin-top:0.55rem;">{html.escape(item.note)}</div>'
-            "</div>"
-        )
-    st.markdown(
-        f'<div class="etf-card-grid">{"".join(cards)}</div>',
-        unsafe_allow_html=True,
-    )
+    st.caption("点击任意 ETF，会立即切换到该标的。")
+    columns = st.columns(2)
+    for index, item in enumerate(presets):
+        with columns[index % 2]:
+            if st.button(
+                f"{item.symbol} · {item.name}",
+                key=f"etf_preset_button_{item.market}_{item.style}_{item.symbol}",
+                use_container_width=True,
+                help=f"{item.market} · {item.style} · {item.theme} · {item.note}",
+            ):
+                st.session_state.selected_etf_symbol = item.symbol
+                st.rerun()
+            tags = "".join(
+                f'<span class="tag">{html.escape(tag)}</span>'
+                for tag in (item.market, item.style, item.theme)
+            )
+            st.markdown(
+                f'<div class="tag-row">{tags}</div>'
+                f'<div class="insight-detail" style="margin:0.25rem 0 0.65rem;">{html.escape(item.note)}</div>',
+                unsafe_allow_html=True,
+            )
 
 
 def render_overview_risk_panel(technical: dict, risk: dict, weather: dict) -> None:
@@ -1600,13 +1603,22 @@ def main() -> None:
                 help="按你的偏好筛选大盘、科技成长、成长、低波红利等风格。",
             )
             filtered_presets = get_presets(market_filter, style_filter)
+            selected_etf_symbol = st.session_state.get("selected_etf_symbol")
+            selected_index = 0
+            if selected_etf_symbol:
+                for index, item in enumerate(filtered_presets, start=1):
+                    if item.symbol == selected_etf_symbol:
+                        selected_index = index
+                        break
             selected_preset = st.selectbox(
                 "ETF 快捷选择",
                 [None, *filtered_presets],
+                index=selected_index,
                 format_func=lambda item: "自定义输入" if item is None else item.label,
                 help="这些只是常见 ETF 快捷入口，不构成投资建议。",
             )
             if selected_preset:
+                st.session_state.selected_etf_symbol = selected_preset.symbol
                 ticker = selected_preset.symbol
                 selected_preset_style = selected_preset.style
                 selected_preset_theme = selected_preset.theme
