@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import html
 import os
-from datetime import date
+from datetime import date, datetime, time
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -52,6 +53,13 @@ TIMEFRAME_OPTIONS = {
 PROVIDER_HELP = {
     DataProvider.YAHOO.value: "真实行情与新闻",
     DataProvider.GOOGLE_MOCK.value: "离线演示数据",
+}
+
+MARKET_UPDATE_RULES = {
+    "China A": ("Asia/Shanghai", time(15, 15)),
+    "Hong Kong": ("Asia/Hong_Kong", time(16, 30)),
+    "Japan": ("Asia/Tokyo", time(15, 45)),
+    "US / Global": ("America/New_York", time(16, 30)),
 }
 
 
@@ -894,6 +902,44 @@ def load_market_snapshot(
         "news": [item.model_dump() for item in news],
         "errors": errors,
     }
+
+
+def build_market_cache_slot(ticker: str) -> str:
+    symbol = resolve_symbol(ticker)
+    timezone_name, close_buffer = _market_update_rule(symbol.market)
+    market_now = datetime.now(ZoneInfo(timezone_name))
+    session_phase = "postclose" if market_now.time() >= close_buffer else "preclose"
+    return f"{symbol.market}:{market_now.date().isoformat()}:{session_phase}"
+
+
+def _market_update_rule(market: str) -> tuple[str, time]:
+    for prefix, rule in MARKET_UPDATE_RULES.items():
+        if market.startswith(prefix):
+            return rule
+    return MARKET_UPDATE_RULES["US / Global"]
+
+
+def render_data_freshness_notice(snapshot: dict) -> None:
+    prices = snapshot.get("prices") or []
+    if not prices:
+        st.warning("当前数据源没有返回价格数据。")
+        return
+
+    last_date = str(prices[-1].get("date", ""))
+    provider_symbol = snapshot.get("provider_symbol", snapshot.get("ticker", "标的"))
+    market = snapshot.get("market", "")
+    symbol = resolve_symbol(provider_symbol)
+    timezone_name, close_buffer = _market_update_rule(market or symbol.market)
+    market_now = datetime.now(ZoneInfo(timezone_name))
+    market_today = market_now.date().isoformat()
+    phase = "盘后" if market_now.time() >= close_buffer else "盘中/盘前"
+    if last_date == market_today:
+        st.caption(f"最新行情日期：{last_date} · {provider_symbol} · {phase}数据已更新")
+        return
+    st.warning(
+        f"最新行情日期：{last_date}，不是 {market_today}。"
+        f"可能原因：市场休市、数据源尚未发布收盘数据，或需要点击“刷新行情与新闻”。"
+    )
 
 
 @st.cache_data(ttl=86400, show_spinner=False)
@@ -1951,8 +1997,8 @@ def main() -> None:
         render_attention_page(provider, force_attention_refresh)
         return
 
-    cache_day = date.today().isoformat()
-    snapshot_key = f"{provider}:{ticker}:{timeframe}:{selected_preset_style}:{selected_preset_theme}:{cache_day}"
+    market_cache_slot = build_market_cache_slot(ticker)
+    snapshot_key = f"{provider}:{ticker}:{timeframe}:{selected_preset_style}:{selected_preset_theme}:{market_cache_slot}"
     needs_snapshot = (
         "snapshot" not in st.session_state
         or st.session_state.get("snapshot_key") != snapshot_key
@@ -1966,7 +2012,7 @@ def main() -> None:
                 provider,
                 ticker,
                 timeframe,
-                cache_day,
+                market_cache_slot,
                 selected_preset_style,
                 selected_preset_theme,
             )
@@ -2031,6 +2077,7 @@ def main() -> None:
         st.warning(error)
     if snapshot.get("symbol_note"):
         st.caption(snapshot["symbol_note"])
+    render_data_freshness_notice(snapshot)
     render_takeaway_panel(takeaway)
     render_metrics(metrics)
     cache_status = "复用今日缓存" if daily_analysis.cache_hit else "今日已生成"
