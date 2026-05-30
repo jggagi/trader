@@ -1,0 +1,8 @@
+{
+  "name": "Trading Master",
+  "emoji": "📈",
+  "description": "Multi-Asset Trading Strategy & Market Intelligence Dashboard",
+  "type": "proxy",
+  "target": "http://localhost:8501",
+  "route": "/trading-master"
+}

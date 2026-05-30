@@ -1271,13 +1271,12 @@ def render_runtime_notice() -> None:
 def configure_streamlit_secrets() -> None:
     try:
         secrets = st.secrets
+        for key in ("OPENAI_API_KEY", "OPENAI_MODEL", "APP_MODE", "DEFAULT_TICKER"):
+            value = secrets.get(key)
+            if value and not os.getenv(key):
+                os.environ[key] = str(value)
     except Exception:
         return
-
-    for key in ("OPENAI_API_KEY", "OPENAI_MODEL", "APP_MODE", "DEFAULT_TICKER"):
-        value = secrets.get(key)
-        if value and not os.getenv(key):
-            os.environ[key] = str(value)
 
 
 def get_default_ticker() -> str:
