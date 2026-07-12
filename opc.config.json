@@ -4,5 +4,12 @@
   "description": "Multi-Asset Trading Strategy & Market Intelligence Dashboard",
   "type": "proxy",
   "target": "http://localhost:8501",
-  "route": "/trading-master"
+  "route": "/trading-master",
+  "runtime": {
+    "manager": "pm2",
+    "units": ["trading-master"],
+    "displayName": "Trading Master service",
+    "readOnly": false,
+    "allowedActions": ["start", "restart"]
+  }
 }
