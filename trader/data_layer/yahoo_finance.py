@@ -11,7 +11,9 @@ from trader.models import NewsItem, PricePoint
 
 class YahooFinanceFetcher(BaseMarketDataFetcher):
     def get_historical_prices(self, ticker: str, timeframe: str) -> list[PricePoint]:
-        history = yf.Ticker(ticker.upper()).history(period=timeframe, interval="1d", auto_adjust=False)
+        history = yf.Ticker(ticker.upper()).history(
+            period=timeframe, interval="1d", auto_adjust=False
+        )
         if history.empty:
             return []
 
@@ -48,11 +50,21 @@ def _normalize_news(item: dict[str, Any]) -> NewsItem:
     content = item.get("content") if isinstance(item.get("content"), dict) else item
     title = content.get("title") or item.get("title") or "Untitled"
     provider = content.get("provider") or {}
-    publisher = provider.get("displayName") if isinstance(provider, dict) else item.get("publisher")
-    link = content.get("canonicalUrl") or content.get("clickThroughUrl") or item.get("link")
+    publisher = (
+        provider.get("displayName")
+        if isinstance(provider, dict)
+        else item.get("publisher")
+    )
+    link = (
+        content.get("canonicalUrl")
+        or content.get("clickThroughUrl")
+        or item.get("link")
+    )
     if isinstance(link, dict):
         link = link.get("url")
-    published_at = content.get("pubDate") or _timestamp_to_iso(item.get("providerPublishTime"))
+    published_at = content.get("pubDate") or _timestamp_to_iso(
+        item.get("providerPublishTime")
+    )
     summary = content.get("summary") or item.get("summary")
     return NewsItem(
         title=title,
@@ -70,4 +82,3 @@ def _timestamp_to_iso(value: Any) -> str | None:
         return datetime.fromtimestamp(int(value), tz=timezone.utc).isoformat()
     except (TypeError, ValueError, OSError):
         return None
-

@@ -74,7 +74,9 @@ def build_risk_snapshot(frame: pd.DataFrame) -> dict[str, Any]:
 
     enriched = enrich_price_frame(frame)
     returns = enriched["daily_return"].dropna()
-    annualized_volatility = float(returns.std() * sqrt(252) * 100) if not returns.empty else None
+    annualized_volatility = (
+        float(returns.std() * sqrt(252) * 100) if not returns.empty else None
+    )
     max_drawdown = float(enriched["drawdown"].min() * 100)
     best_day = float(returns.max() * 100) if not returns.empty else None
     worst_day = float(returns.min() * 100) if not returns.empty else None
@@ -99,7 +101,9 @@ def build_risk_snapshot(frame: pd.DataFrame) -> dict[str, Any]:
     }
 
 
-def build_weather_forecast(technical: dict[str, Any], risk: dict[str, Any]) -> dict[str, Any]:
+def build_weather_forecast(
+    technical: dict[str, Any], risk: dict[str, Any]
+) -> dict[str, Any]:
     short_label = _short_term_weather(technical)
     long_label = _long_term_weather(technical)
     risk_label = _risk_weather(risk)
@@ -153,7 +157,9 @@ def build_action_checklist(
 ) -> list[str]:
     checklist = []
     if move_pct is not None and abs(move_pct) >= 5:
-        checklist.append("价格已经出现明显变化，先写下你原来的买入/持有理由是否仍成立。")
+        checklist.append(
+            "价格已经出现明显变化，先写下你原来的买入/持有理由是否仍成立。"
+        )
     else:
         checklist.append("价格信号不极端，避免为了交易而交易。")
 
@@ -168,9 +174,13 @@ def build_action_checklist(
         checklist.append("即使当前波动温和，也要预设压力情景，不要把温和当成永久。")
 
     if position_value > 0:
-        checklist.append("把下面情景推演里的持仓影响与现金流、睡眠质量和其他资产一起看。")
+        checklist.append(
+            "把下面情景推演里的持仓影响与现金流、睡眠质量和其他资产一起看。"
+        )
     else:
-        checklist.append(f"输入你的 {ticker} 持仓市值后，可以把价格情景转换成更直观的美元影响。")
+        checklist.append(
+            f"输入你的 {ticker} 持仓市值后，可以把价格情景转换成更直观的美元影响。"
+        )
     return checklist
 
 
@@ -214,14 +224,39 @@ def _short_term_weather(technical: dict[str, Any]) -> dict[str, str]:
     distance = technical.get("distance_to_ma20")
     trend = technical.get("trend_label")
     if distance is None:
-        return {"icon": "○", "label": "雾天", "tone": "信号不足", "detail": "短期数据不足，先不做方向判断。"}
+        return {
+            "icon": "○",
+            "label": "雾天",
+            "tone": "信号不足",
+            "detail": "短期数据不足，先不做方向判断。",
+        }
     if distance >= 3:
-        return {"icon": "☀", "label": "晴朗", "tone": "短期偏强", "detail": "价格明显高于 20 日均线，短线动能较强。"}
+        return {
+            "icon": "☀",
+            "label": "晴朗",
+            "tone": "短期偏强",
+            "detail": "价格明显高于 20 日均线，短线动能较强。",
+        }
     if distance >= 0:
-        return {"icon": "⛅", "label": "多云转晴", "tone": "短期温和", "detail": "价格略高于 20 日均线，短期趋势仍可观察。"}
+        return {
+            "icon": "⛅",
+            "label": "多云转晴",
+            "tone": "短期温和",
+            "detail": "价格略高于 20 日均线，短期趋势仍可观察。",
+        }
     if trend == "短线转弱" or distance <= -3:
-        return {"icon": "🌧", "label": "阵雨", "tone": "短期转弱", "detail": "价格跌破 20 日均线，短期动能偏弱。"}
-    return {"icon": "☁", "label": "多云", "tone": "短期中性", "detail": "价格贴近 20 日均线，方向还不够清楚。"}
+        return {
+            "icon": "🌧",
+            "label": "阵雨",
+            "tone": "短期转弱",
+            "detail": "价格跌破 20 日均线，短期动能偏弱。",
+        }
+    return {
+        "icon": "☁",
+        "label": "多云",
+        "tone": "短期中性",
+        "detail": "价格贴近 20 日均线，方向还不够清楚。",
+    }
 
 
 def _long_term_weather(technical: dict[str, Any]) -> dict[str, str]:
@@ -229,28 +264,75 @@ def _long_term_weather(technical: dict[str, Any]) -> dict[str, str]:
     ma20 = technical.get("ma20")
     ma50 = technical.get("ma50")
     if distance is None or ma20 is None or ma50 is None:
-        return {"icon": "○", "label": "雾天", "tone": "长期信号不足", "detail": "长期均线样本不足，先观察更多数据。"}
+        return {
+            "icon": "○",
+            "label": "雾天",
+            "tone": "长期信号不足",
+            "detail": "长期均线样本不足，先观察更多数据。",
+        }
     if ma20 > ma50 and distance >= 0:
-        return {"icon": "☀", "label": "晴朗", "tone": "长期向上", "detail": "20 日均线位于 50 日均线上方，长期结构偏健康。"}
+        return {
+            "icon": "☀",
+            "label": "晴朗",
+            "tone": "长期向上",
+            "detail": "20 日均线位于 50 日均线上方，长期结构偏健康。",
+        }
     if distance >= 0:
-        return {"icon": "⛅", "label": "云间有光", "tone": "长期修复", "detail": "价格仍在 50 日均线上方，但趋势结构还需要确认。"}
+        return {
+            "icon": "⛅",
+            "label": "云间有光",
+            "tone": "长期修复",
+            "detail": "价格仍在 50 日均线上方，但趋势结构还需要确认。",
+        }
     if distance <= -6:
-        return {"icon": "⛈", "label": "雷雨", "tone": "长期承压", "detail": "价格明显低于 50 日均线，长期结构偏弱。"}
-    return {"icon": "☁", "label": "阴天", "tone": "长期观望", "detail": "价格低于 50 日均线，适合等待结构改善。"}
+        return {
+            "icon": "⛈",
+            "label": "雷雨",
+            "tone": "长期承压",
+            "detail": "价格明显低于 50 日均线，长期结构偏弱。",
+        }
+    return {
+        "icon": "☁",
+        "label": "阴天",
+        "tone": "长期观望",
+        "detail": "价格低于 50 日均线，适合等待结构改善。",
+    }
 
 
 def _risk_weather(risk: dict[str, Any]) -> dict[str, str]:
     label = risk.get("risk_label")
     if label == "波动偏高":
-        return {"icon": "⛈", "label": "风暴", "tone": "风险偏高", "detail": risk.get("detail", "")}
+        return {
+            "icon": "⛈",
+            "label": "风暴",
+            "tone": "风险偏高",
+            "detail": risk.get("detail", ""),
+        }
     if label == "中等波动":
-        return {"icon": "🌦", "label": "小雨", "tone": "风险中等", "detail": risk.get("detail", "")}
+        return {
+            "icon": "🌦",
+            "label": "小雨",
+            "tone": "风险中等",
+            "detail": risk.get("detail", ""),
+        }
     if label == "波动温和":
-        return {"icon": "☀", "label": "晴朗", "tone": "风险温和", "detail": risk.get("detail", "")}
-    return {"icon": "○", "label": "雾天", "tone": "风险未知", "detail": risk.get("detail", "")}
+        return {
+            "icon": "☀",
+            "label": "晴朗",
+            "tone": "风险温和",
+            "detail": risk.get("detail", ""),
+        }
+    return {
+        "icon": "○",
+        "label": "雾天",
+        "tone": "风险未知",
+        "detail": risk.get("detail", ""),
+    }
 
 
-def _weather_summary(short_term: dict[str, str], long_term: dict[str, str], risk_weather: dict[str, str]) -> str:
+def _weather_summary(
+    short_term: dict[str, str], long_term: dict[str, str], risk_weather: dict[str, str]
+) -> str:
     return (
         f"短期{short_term['label']}，长期{long_term['label']}，风险环境{risk_weather['label']}。"
         "把它当成天气预报：帮助决定是否出门研究，不代表一定会下雨或放晴。"

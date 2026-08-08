@@ -59,10 +59,14 @@ def build_investment_frameworks(
 
 
 def classify_asset(snapshot: dict) -> dict[str, str | bool]:
-    ticker = str(snapshot.get("provider_symbol") or snapshot.get("ticker") or "").upper()
+    ticker = str(
+        snapshot.get("provider_symbol") or snapshot.get("ticker") or ""
+    ).upper()
     market = str(snapshot.get("market") or "")
     query = str(snapshot.get("query") or ticker).upper()
-    is_known_etf = bool(snapshot.get("selected_preset_symbol")) or _looks_like_etf(ticker, query)
+    is_known_etf = bool(snapshot.get("selected_preset_symbol")) or _looks_like_etf(
+        ticker, query
+    )
     style = str(snapshot.get("selected_preset_style") or "")
     theme = str(snapshot.get("selected_preset_theme") or "")
     if is_known_etf:
@@ -118,7 +122,7 @@ def build_dalio_framework(
             ),
             FrameworkItem(
                 "风险平衡",
-                f"{risk_label} · 最大回撤 { _format_optional_pct(risk.get('max_drawdown')) }",
+                f"{risk_label} · 最大回撤 {_format_optional_pct(risk.get('max_drawdown'))}",
                 "问：如果这个标的继续回撤，组合里有没有资产能对冲同一个宏观冲击？",
                 _answer_risk_balance(ticker, risk_label, risk.get("max_drawdown")),
             ),
@@ -154,7 +158,9 @@ def build_buffett_munger_framework(
     ticker = snapshot.get("ticker", "Unknown")
     move_pct = metrics.get("move_pct_raw")
     context = _framework_context(snapshot, metrics)
-    current_read = _value_current_read(move_pct, technical.get("trend_label"), risk.get("risk_label"))
+    current_read = _value_current_read(
+        move_pct, technical.get("trend_label"), risk.get("risk_label")
+    )
     return InvestmentFramework(
         name="Buffett-Munger 价值投资框架",
         subtitle="好生意、护城河、现金流、安全边际与心理纪律",
@@ -185,13 +191,17 @@ def build_buffett_munger_framework(
                 "安全边际",
                 f"近期区间涨跌 {metrics.get('move_pct', 'N/A')}，风险状态 {risk.get('risk_label', '数据不足')}",
                 "问：现在的价格是否已经透支乐观预期？如果错了，下行空间有多大？",
-                _answer_margin_of_safety(ticker, context, move_pct, risk.get("risk_label")),
+                _answer_margin_of_safety(
+                    ticker, context, move_pct, risk.get("risk_label")
+                ),
             ),
             FrameworkItem(
                 "反心理误判",
                 "防止追涨、锚定、确认偏误和因为大师持仓而外包判断。",
                 "问：如果不知道任何大师买了它，我还愿意独立持有吗？",
-                _answer_psychology(ticker, context, move_pct, technical.get("trend_label")),
+                _answer_psychology(
+                    ticker, context, move_pct, technical.get("trend_label")
+                ),
             ),
         ],
         next_questions=[
@@ -214,7 +224,9 @@ def _dalio_current_read(move_pct: float | None, risk_label: str, trend: str) -> 
     return "宏观信号温和，适合观察而不是频繁动作。"
 
 
-def _value_current_read(move_pct: float | None, trend: str | None, risk_label: str | None) -> str:
+def _value_current_read(
+    move_pct: float | None, trend: str | None, risk_label: str | None
+) -> str:
     if move_pct is None:
         return "价值判断不能只靠行情，先回到商业模式、现金流和估值。"
     if move_pct <= -5:
@@ -237,12 +249,16 @@ def _framework_context(snapshot: dict, metrics: dict[str, Any]) -> str:
     timeframe = snapshot.get("timeframe", "当前周期")
     move_text = metrics.get("move_pct", "N/A")
     news = snapshot.get("news") or []
-    leading_news = "；".join(str(item.get("title", "")) for item in news[:2] if item.get("title"))
+    leading_news = "；".join(
+        str(item.get("title", "")) for item in news[:2] if item.get("title")
+    )
     news_text = f"；新闻线索：{leading_news}" if leading_news else "；暂无明确新闻线索"
     return f"{ticker} 在 {timeframe} 内涨跌 {move_text}{news_text}"
 
 
-def _answer_cycle_position(ticker: str, context: str, move_pct: float | None, trend: str, risk_label: str) -> str:
+def _answer_cycle_position(
+    ticker: str, context: str, move_pct: float | None, trend: str, risk_label: str
+) -> str:
     if move_pct is None:
         return f"Dalio 式回答：{ticker} 的价格和新闻证据不足，先不要给周期下结论。"
     if risk_label == "波动偏高":
@@ -254,7 +270,9 @@ def _answer_cycle_position(ticker: str, context: str, move_pct: float | None, tr
     return f"Dalio 式回答：{context}。周期信号不极端，最佳动作通常是观察、再平衡，而不是大幅押注。"
 
 
-def _answer_risk_balance(ticker: str, risk_label: str, max_drawdown: float | None) -> str:
+def _answer_risk_balance(
+    ticker: str, risk_label: str, max_drawdown: float | None
+) -> str:
     drawdown = _format_optional_pct(max_drawdown)
     if risk_label == "波动偏高":
         return f"Dalio 式回答：{ticker} 最大回撤 {drawdown}，说明它可能正在放大组合波动，需要检查是否有现金、债券、红利或其他区域资产对冲。"
@@ -308,9 +326,13 @@ def _answer_cash_flow(snapshot: dict, context: str) -> str:
     return f"Buffett-Munger 式回答：{context}。好生意最终要体现在自由现金流和资本回报率上，否则增长可能只是昂贵的幻觉。"
 
 
-def _answer_margin_of_safety(ticker: str, context: str, move_pct: float | None, risk_label: str | None) -> str:
+def _answer_margin_of_safety(
+    ticker: str, context: str, move_pct: float | None, risk_label: str | None
+) -> str:
     if move_pct is None:
-        return f"Buffett-Munger 式回答：{ticker} 没有价格和估值上下文，就谈不上安全边际。"
+        return (
+            f"Buffett-Munger 式回答：{ticker} 没有价格和估值上下文，就谈不上安全边际。"
+        )
     if move_pct >= 5:
         return f"Buffett-Munger 式回答：{context}。上涨后更要保守，先问价格是否已经把好消息都算进去了。"
     if move_pct <= -5:
@@ -320,7 +342,9 @@ def _answer_margin_of_safety(ticker: str, context: str, move_pct: float | None, 
     return f"Buffett-Munger 式回答：{context}。价格不极端时，不急着行动，先把内在价值区间和机会成本算清楚。"
 
 
-def _answer_psychology(ticker: str, context: str, move_pct: float | None, trend: str | None) -> str:
+def _answer_psychology(
+    ticker: str, context: str, move_pct: float | None, trend: str | None
+) -> str:
     if move_pct is not None and move_pct >= 5 and trend in {"上升趋势", "短线偏强"}:
         return f"Munger 式回答：{context}。最危险的是把 {ticker} 的上涨当成自己聪明。先写下反方理由，再决定是否值得承担追高风险。"
     if move_pct is not None and move_pct <= -5:
@@ -355,13 +379,19 @@ def _should_apply_dalio(asset_profile: dict[str, str | bool]) -> bool:
 
 
 def _should_apply_buffett_munger(asset_profile: dict[str, str | bool]) -> bool:
-    return asset_profile["asset_type"] in {"stock", "growth_or_sector_etf", "dividend_factor_etf"}
+    return asset_profile["asset_type"] in {
+        "stock",
+        "growth_or_sector_etf",
+        "dividend_factor_etf",
+    }
 
 
 def _dalio_applicability_reason(asset_profile: dict[str, str | bool]) -> str:
     asset_type = asset_profile["asset_type"]
     if asset_type == "stock":
-        return "个股也会受到利率、信用、通胀和市场风险偏好的影响；此框架作为宏观背景使用。"
+        return (
+            "个股也会受到利率、信用、通胀和市场风险偏好的影响；此框架作为宏观背景使用。"
+        )
     if asset_type == "broad_etf":
         return "宽基 ETF 本质是资产配置工具，非常适合用宏观周期和风险平衡框架分析。"
     if asset_type == "growth_or_sector_etf":
@@ -378,5 +408,7 @@ def _value_applicability_reason(asset_profile: dict[str, str | bool]) -> str:
     if asset_type == "growth_or_sector_etf":
         return "行业/成长 ETF 不能像单一公司那样估值，但可以检查底层行业质量、集中度和长期现金流质量。"
     if asset_type == "dividend_factor_etf":
-        return "红利/低波 ETF 可用价值框架检查股息质量、成分股稳定性和是否只是高股息陷阱。"
+        return (
+            "红利/低波 ETF 可用价值框架检查股息质量、成分股稳定性和是否只是高股息陷阱。"
+        )
     return "此品类不适合完整套用单一公司价值投资框架。"

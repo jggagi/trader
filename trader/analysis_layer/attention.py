@@ -43,7 +43,9 @@ def build_attention_candidates(
                 action_hint=_build_action_hint(item.holder_count, move_pct),
             )
         )
-    return sorted(candidates, key=lambda candidate: candidate.attention_score, reverse=True)
+    return sorted(
+        candidates, key=lambda candidate: candidate.attention_score, reverse=True
+    )
 
 
 def _compute_move_pct(prices: list[PricePoint]) -> float | None:

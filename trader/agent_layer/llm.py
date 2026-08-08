@@ -9,7 +9,9 @@ import requests
 
 
 class StatelessLLMClient(Protocol):
-    def complete(self, *, system_prompt: str, user_payload: dict[str, Any]) -> tuple[str, bool]:
+    def complete(
+        self, *, system_prompt: str, user_payload: dict[str, Any]
+    ) -> tuple[str, bool]:
         """Return generated text and whether an external LLM was used."""
 
 
@@ -17,7 +19,9 @@ class StatelessLLMClient(Protocol):
 class LocalFallbackLLMClient:
     reason: str = "OPENAI_API_KEY is not configured"
 
-    def complete(self, *, system_prompt: str, user_payload: dict[str, Any]) -> tuple[str, bool]:
+    def complete(
+        self, *, system_prompt: str, user_payload: dict[str, Any]
+    ) -> tuple[str, bool]:
         if "market_snapshot" in user_payload:
             return _local_critique(system_prompt, user_payload), False
         return _local_attribution(user_payload), False
@@ -29,7 +33,9 @@ class OpenAIResponsesClient:
     model: str = "gpt-4o-mini"
     timeout_seconds: int = 45
 
-    def complete(self, *, system_prompt: str, user_payload: dict[str, Any]) -> tuple[str, bool]:
+    def complete(
+        self, *, system_prompt: str, user_payload: dict[str, Any]
+    ) -> tuple[str, bool]:
         response = requests.post(
             "https://api.openai.com/v1/responses",
             headers={
@@ -42,7 +48,9 @@ class OpenAIResponsesClient:
                     {"role": "system", "content": system_prompt},
                     {
                         "role": "user",
-                        "content": json.dumps(user_payload, ensure_ascii=False, default=str),
+                        "content": json.dumps(
+                            user_payload, ensure_ascii=False, default=str
+                        ),
                     },
                 ],
             },
@@ -87,7 +95,10 @@ def _local_attribution(user_payload: dict[str, Any]) -> str:
         return "本地分析：暂时没有足够价格数据，无法做可靠归因。建议换一个周期或数据源后重新刷新。"
 
     direction = "上涨" if move >= 0 else "下跌"
-    leading_news = "；".join(item.get("title", "未命名新闻") for item in news[:3]) or "没有相关新闻"
+    leading_news = (
+        "；".join(item.get("title", "未命名新闻") for item in news[:3])
+        or "没有相关新闻"
+    )
     return (
         f"本地分析：{ticker} 在 {timeframe} 内{direction} {move:+.2f}%。"
         "当前只能把价格变化与已拉取新闻做弱关联，不能证明因果。"
@@ -106,7 +117,10 @@ def _local_critique(system_prompt: str, user_payload: dict[str, Any]) -> str:
     move = _price_move(prices)
     move_text = "数据不足" if move is None else f"{move:+.2f}%"
     news = snapshot.get("news") or []
-    news_text = "；".join(item.get("title", "未命名新闻") for item in news[:2]) or "暂无明确新闻线索"
+    news_text = (
+        "；".join(item.get("title", "未命名新闻") for item in news[:2])
+        or "暂无明确新闻线索"
+    )
     context = f"{ticker}（{market}，{asset_type}）在 {timeframe} 内涨跌 {move_text}，新闻线索：{news_text}"
 
     if "Warren Buffett" in system_prompt:

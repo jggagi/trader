@@ -55,4 +55,3 @@ def _timeframe_to_days(timeframe: str) -> int:
         "6mo": 132,
         "1y": 252,
     }.get(timeframe, 22)
-

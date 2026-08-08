@@ -17,7 +17,9 @@ class DailyAnalysis:
     cache_hit: bool
 
 
-def build_daily_cache_key(*, provider: str, ticker: str, timeframe: str, day: date | None = None) -> str:
+def build_daily_cache_key(
+    *, provider: str, ticker: str, timeframe: str, day: date | None = None
+) -> str:
     cache_day = day or date.today()
     safe_parts = [
         cache_day.isoformat(),
@@ -33,7 +35,9 @@ def get_daily_cache_path(cache_key: str, cache_dir: Path | None = None) -> Path:
     return root / f"{cache_key}.json"
 
 
-def load_daily_analysis(cache_key: str, cache_dir: Path | None = None) -> DailyAnalysis | None:
+def load_daily_analysis(
+    cache_key: str, cache_dir: Path | None = None
+) -> DailyAnalysis | None:
     path = get_daily_cache_path(cache_key, cache_dir)
     if not path.exists():
         return None

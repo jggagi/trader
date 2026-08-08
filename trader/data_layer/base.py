@@ -15,4 +15,3 @@ class BaseMarketDataFetcher(ABC):
     @abstractmethod
     def get_recent_news(self, ticker: str) -> list[NewsItem]:
         raise NotImplementedError
-

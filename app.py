@@ -12,9 +12,17 @@ import streamlit as st
 
 from trader.agent_layer.attribution.engine import AttributionEngine
 from trader.agent_layer.critique.engine import MasterCritiqueEngine
-from trader.agent_layer.daily_cache import DailyAnalysis, build_daily_cache_key, load_daily_analysis, save_daily_analysis
+from trader.agent_layer.daily_cache import (
+    DailyAnalysis,
+    build_daily_cache_key,
+    load_daily_analysis,
+    save_daily_analysis,
+)
 from trader.agent_layer.llm import build_default_llm_client
-from trader.analysis_layer.attention import AttentionCandidate, build_attention_candidates
+from trader.analysis_layer.attention import (
+    AttentionCandidate,
+    build_attention_candidates,
+)
 from trader.analysis_layer.frameworks import build_investment_frameworks
 from trader.analysis_layer.insights import (
     build_action_checklist,
@@ -39,7 +47,6 @@ from trader.state_layer.parser import LocalDocumentParser
 
 
 st.set_page_config(page_title="Market Lens", page_icon="📈", layout="wide")
-
 
 
 TIMEFRAME_OPTIONS = {
@@ -878,12 +885,16 @@ def load_market_snapshot(
     symbol = resolve_symbol(ticker)
     try:
         fetcher = create_market_data_fetcher(DataProvider(provider))
-        prices = fetcher.get_historical_prices(ticker=symbol.provider_symbol, timeframe=timeframe)
+        prices = fetcher.get_historical_prices(
+            ticker=symbol.provider_symbol, timeframe=timeframe
+        )
         news = fetcher.get_recent_news(ticker=symbol.provider_symbol)
     except Exception as exc:
         errors.append(f"{provider} 数据拉取失败，已切换到离线演示数据：{exc}")
         fallback = create_market_data_fetcher(DataProvider.GOOGLE_MOCK)
-        prices = fallback.get_historical_prices(ticker=symbol.provider_symbol, timeframe=timeframe)
+        prices = fallback.get_historical_prices(
+            ticker=symbol.provider_symbol, timeframe=timeframe
+        )
         news = fallback.get_recent_news(ticker=symbol.provider_symbol)
         provider = DataProvider.GOOGLE_MOCK.value
     return {
@@ -943,14 +954,18 @@ def render_data_freshness_notice(snapshot: dict) -> None:
 
 
 @st.cache_data(ttl=86400, show_spinner=False)
-def load_attention_candidates(provider: str, cache_day: str) -> list[AttentionCandidate]:
+def load_attention_candidates(
+    provider: str, cache_day: str
+) -> list[AttentionCandidate]:
     del cache_day
     consensus = get_consensus_holdings()
     fetcher = create_market_data_fetcher(DataProvider(provider))
     prices_by_symbol = {}
     for item in consensus:
         try:
-            prices_by_symbol[item.symbol] = fetcher.get_historical_prices(item.symbol, "5d")
+            prices_by_symbol[item.symbol] = fetcher.get_historical_prices(
+                item.symbol, "5d"
+            )
         except Exception:
             prices_by_symbol[item.symbol] = []
     return build_attention_candidates(consensus, prices_by_symbol)
@@ -987,13 +1002,17 @@ def get_daily_analysis(
             generated_at="本次会话",
             cache_hit=False,
         )
-    return save_daily_analysis(cache_key=cache_key, attribution=attribution, critique=critique)
+    return save_daily_analysis(
+        cache_key=cache_key, attribution=attribution, critique=critique
+    )
 
 
 def render_update_policy_panel(compact: bool = False) -> None:
     policies = get_update_policies()
     if compact:
-        st.caption("更新节奏：行情/新闻日更 · 推荐关注日更 · 归因/批判日更 · 投资框架日更 · 大师持仓周更 · ETF 目录月更")
+        st.caption(
+            "更新节奏：行情/新闻日更 · 推荐关注日更 · 归因/批判日更 · 投资框架日更 · 大师持仓周更 · ETF 目录月更"
+        )
         return
 
     st.subheader("数据更新节奏")
@@ -1026,7 +1045,9 @@ def format_optional_pct(value: float | None) -> str:
     return f"{value:+.2f}%"
 
 
-def compute_market_metrics(frame: pd.DataFrame, news_count: int, ticker: str, currency_symbol: str) -> dict:
+def compute_market_metrics(
+    frame: pd.DataFrame, news_count: int, ticker: str, currency_symbol: str
+) -> dict:
     if frame.empty:
         return {
             "ticker": ticker,
@@ -1056,7 +1077,9 @@ def compute_market_metrics(frame: pd.DataFrame, news_count: int, ticker: str, cu
     }
 
 
-def build_plain_language_takeaway(metrics: dict, timeframe: str, news: list[dict]) -> dict:
+def build_plain_language_takeaway(
+    metrics: dict, timeframe: str, news: list[dict]
+) -> dict:
     move_pct = metrics.get("move_pct_raw")
     readable_timeframe = TIMEFRAME_OPTIONS.get(timeframe, timeframe)
     news_count = len(news)
@@ -1072,16 +1095,22 @@ def build_plain_language_takeaway(metrics: dict, timeframe: str, news: list[dict
         title = f"过去{readable_timeframe}明显走强，先看是否由少数大科技股和宏观预期共同推动。"
         tone = "偏强"
     elif move_pct >= 1:
-        title = f"过去{readable_timeframe}温和上涨，适合重点核对新闻催化和成交量是否配合。"
+        title = (
+            f"过去{readable_timeframe}温和上涨，适合重点核对新闻催化和成交量是否配合。"
+        )
         tone = "温和偏强"
     elif move_pct <= -5:
-        title = f"过去{readable_timeframe}明显回撤，先排查利率、通胀、财报或风险偏好变化。"
+        title = (
+            f"过去{readable_timeframe}明显回撤，先排查利率、通胀、财报或风险偏好变化。"
+        )
         tone = "偏弱"
     elif move_pct <= -1:
         title = f"过去{readable_timeframe}小幅走弱，重点看下跌是否有明确新闻解释。"
         tone = "温和偏弱"
     else:
-        title = f"过去{readable_timeframe}波动不大，短期信号不强，适合等待更清晰的催化。"
+        title = (
+            f"过去{readable_timeframe}波动不大，短期信号不强，适合等待更清晰的催化。"
+        )
         tone = "中性"
 
     body = (
@@ -1146,8 +1175,7 @@ def render_price_chart(frame: pd.DataFrame) -> None:
             y=chart_frame["volume"],
             marker_color="rgba(8, 127, 140, 0.35)",
             name="Volume",
-        )
-        ,
+        ),
         row=2,
         col=1,
     )
@@ -1181,7 +1209,9 @@ def render_return_heatmap(frame: pd.DataFrame) -> None:
     heatmap_frame["weekday"] = heatmap_frame["date"].dt.day_name().str[:3]
     weekday_order = ["Mon", "Tue", "Wed", "Thu", "Fri"]
     pivot = (
-        heatmap_frame.pivot_table(index="weekday", columns="week", values="daily_return", aggfunc="sum")
+        heatmap_frame.pivot_table(
+            index="weekday", columns="week", values="daily_return", aggfunc="sum"
+        )
         .reindex(weekday_order)
         .fillna(0)
         * 100
@@ -1299,7 +1329,9 @@ def render_metrics(metrics: dict) -> None:
         )
         for label, value in metric_items
     ]
-    st.markdown(f'<div class="metric-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="metric-grid">{"".join(cards)}</div>', unsafe_allow_html=True
+    )
 
 
 def render_takeaway_panel(takeaway: dict) -> None:
@@ -1339,7 +1371,9 @@ def render_mini_news(news: list[dict]) -> None:
             f'<div class="mini-news-title">{title}</div>'
             "</div>"
         )
-    st.markdown(f'<div class="mini-news">{"".join(cards)}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="mini-news">{"".join(cards)}</div>', unsafe_allow_html=True
+    )
 
 
 def render_news_cards(news: list[dict]) -> None:
@@ -1353,7 +1387,11 @@ def render_news_cards(news: list[dict]) -> None:
         title = html.escape(item.get("title") or "Untitled")
         summary = html.escape(item.get("summary") or item.get("published_at") or "")
         link = item.get("link")
-        title_markup = f'<a href="{html.escape(link)}" target="_blank">{title}</a>' if link else title
+        title_markup = (
+            f'<a href="{html.escape(link)}" target="_blank">{title}</a>'
+            if link
+            else title
+        )
         cards.append(
             '<div class="news-card">'
             f'<div class="news-source">{source}</div>'
@@ -1361,7 +1399,9 @@ def render_news_cards(news: list[dict]) -> None:
             f'<div class="news-summary">{summary}</div>'
             "</div>"
         )
-    st.markdown(f'<div class="news-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="news-grid">{"".join(cards)}</div>', unsafe_allow_html=True
+    )
 
 
 def render_critique_cards(critique) -> None:
@@ -1373,10 +1413,14 @@ def render_critique_cards(critique) -> None:
             f'<div class="critique-body">{html.escape(view.commentary)}</div>'
             "</div>"
         )
-    st.markdown(f'<div class="critique-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="critique-grid">{"".join(cards)}</div>', unsafe_allow_html=True
+    )
 
 
-def render_investment_dashboard(technical: dict, risk: dict, checklist: list[str]) -> None:
+def render_investment_dashboard(
+    technical: dict, risk: dict, checklist: list[str]
+) -> None:
     cards = [
         (
             "趋势状态",
@@ -1407,11 +1451,17 @@ def render_investment_dashboard(technical: dict, risk: dict, checklist: list[str
         "</div>"
         for label, value, detail in cards
     ]
-    st.markdown(f'<div class="insight-grid">{"".join(html_cards)}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="insight-grid">{"".join(html_cards)}</div>', unsafe_allow_html=True
+    )
 
     st.subheader("行动清单")
-    checklist_html = "".join(f'<div class="check-item">{html.escape(item)}</div>' for item in checklist)
-    st.markdown(f'<div class="checklist">{checklist_html}</div>', unsafe_allow_html=True)
+    checklist_html = "".join(
+        f'<div class="check-item">{html.escape(item)}</div>' for item in checklist
+    )
+    st.markdown(
+        f'<div class="checklist">{checklist_html}</div>', unsafe_allow_html=True
+    )
 
 
 def render_risk_radar(technical: dict, risk: dict) -> None:
@@ -1437,7 +1487,11 @@ def render_risk_radar(technical: dict, risk: dict) -> None:
         margin={"l": 16, "r": 16, "t": 16, "b": 16},
         paper_bgcolor="rgba(0,0,0,0)",
         polar={
-            "radialaxis": {"visible": True, "range": [0, 100], "gridcolor": "rgba(102,112,124,0.18)"},
+            "radialaxis": {
+                "visible": True,
+                "range": [0, 100],
+                "gridcolor": "rgba(102,112,124,0.18)",
+            },
             "angularaxis": {"gridcolor": "rgba(102,112,124,0.18)"},
         },
         font={"color": "#16202a"},
@@ -1489,7 +1543,9 @@ def render_framework_cards(frameworks) -> None:
             "</div>"
             for item in framework.items
         )
-        questions_html = "".join(f"<li>{html.escape(question)}</li>" for question in framework.next_questions)
+        questions_html = "".join(
+            f"<li>{html.escape(question)}</li>" for question in framework.next_questions
+        )
         cards.append(
             '<div class="framework-card">'
             f'<div class="framework-title">{html.escape(framework.name)}</div>'
@@ -1505,7 +1561,9 @@ def render_framework_cards(frameworks) -> None:
             "</div>"
             "</div>"
         )
-    st.markdown(f'<div class="framework-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="framework-grid">{"".join(cards)}</div>', unsafe_allow_html=True
+    )
 
 
 def render_etf_catalog_preview(presets) -> None:
@@ -1584,7 +1642,9 @@ def render_master_cards() -> None:
             f'<a class="source-link" href="{html.escape(portfolio.source_url)}" target="_blank">{html.escape(portfolio.source_label)}</a>'
             "</div>"
         )
-    st.markdown(f'<div class="master-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="master-grid">{"".join(cards)}</div>', unsafe_allow_html=True
+    )
 
 
 def render_consensus_holdings() -> None:
@@ -1616,10 +1676,19 @@ def render_consensus_holdings() -> None:
             ],
             textposition="inside",
             marker={
-                "color": ["#087f8c", "#2463eb", "#15803d", "#6d5dfc", "#b7791f", "#65717d"][: len(top)],
+                "color": [
+                    "#087f8c",
+                    "#2463eb",
+                    "#15803d",
+                    "#6d5dfc",
+                    "#b7791f",
+                    "#65717d",
+                ][: len(top)],
                 "line": {"width": 1, "color": "rgba(255,255,255,0.85)"},
             },
-            connector={"line": {"color": "rgba(22,32,42,0.18)", "dash": "solid", "width": 1}},
+            connector={
+                "line": {"color": "rgba(22,32,42,0.18)", "dash": "solid", "width": 1}
+            },
             hovertemplate="<b>%{y}</b><br>%{text}<br>共识分: %{x}<extra></extra>",
         )
     )
@@ -1628,7 +1697,10 @@ def render_consensus_holdings() -> None:
         margin={"l": 10, "r": 10, "t": 4, "b": 8},
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font={"color": "#16202a", "family": "Inter, -apple-system, BlinkMacSystemFont, sans-serif"},
+        font={
+            "color": "#16202a",
+            "family": "Inter, -apple-system, BlinkMacSystemFont, sans-serif",
+        },
     )
     st.plotly_chart(figure, use_container_width=True)
 
@@ -1682,7 +1754,9 @@ def render_consensus_holdings() -> None:
             f'<div class="consensus-meta">研究线索：{html.escape(item.note)}</div>'
             "</div>"
         )
-    st.markdown(f'<div class="consensus-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="consensus-grid">{"".join(cards)}</div>', unsafe_allow_html=True
+    )
 
     consensus_frame = pd.DataFrame(
         [
@@ -1706,7 +1780,9 @@ def render_master_holdings() -> None:
     st.info(
         "大师持仓来自公开披露，通常有季度滞后，只适合学习风格和研究线索，不适合作为实时跟单依据。"
     )
-    st.caption(f"更新策略：{get_policy('大师持仓 / 共识塔').cadence_label} · {get_policy('大师持仓 / 共识塔').rationale}")
+    st.caption(
+        f"更新策略：{get_policy('大师持仓 / 共识塔').cadence_label} · {get_policy('大师持仓 / 共识塔').rationale}"
+    )
     render_consensus_holdings()
     render_master_cards()
 
@@ -1738,7 +1814,10 @@ def render_master_holdings() -> None:
             labels=treemap_frame["代码"],
             parents=[""] * len(treemap_frame),
             values=treemap_frame["视觉权重"],
-            text=[f"{row['代码']}<br>{row['名称']}<br>{row['权重/位置']}" for _, row in treemap_frame.iterrows()],
+            text=[
+                f"{row['代码']}<br>{row['名称']}<br>{row['权重/位置']}"
+                for _, row in treemap_frame.iterrows()
+            ],
             textinfo="text",
             marker={"colorscale": "Teal", "line": {"width": 1, "color": "white"}},
             hovertemplate="%{label}<br>%{text}<extra></extra>",
@@ -1782,7 +1861,9 @@ def render_attention_page(provider: str, force_refresh: bool) -> None:
         unsafe_allow_html=True,
     )
     attention_policy = get_policy("推荐关注雷达")
-    st.caption(f"今日雷达日期：{today} · {attention_policy.cadence_label} · 数据源：{provider}")
+    st.caption(
+        f"今日雷达日期：{today} · {attention_policy.cadence_label} · 数据源：{provider}"
+    )
 
     top = candidates[:6]
     if not top:
@@ -1794,7 +1875,14 @@ def render_attention_page(provider: str, force_refresh: bool) -> None:
             x=[item.attention_score for item in top],
             y=[f"{item.symbol} · {item.name}" for item in top],
             orientation="h",
-            marker_color=["#087f8c", "#2463eb", "#15803d", "#6d5dfc", "#b7791f", "#65717d"][: len(top)],
+            marker_color=[
+                "#087f8c",
+                "#2463eb",
+                "#15803d",
+                "#6d5dfc",
+                "#b7791f",
+                "#65717d",
+            ][: len(top)],
             text=[format_attention_move(item.move_pct) for item in top],
             textposition="auto",
             hovertemplate="<b>%{y}</b><br>关注分: %{x}<br>5日异动: %{text}<extra></extra>",
@@ -1806,7 +1894,10 @@ def render_attention_page(provider: str, force_refresh: bool) -> None:
         margin={"l": 8, "r": 8, "t": 8, "b": 8},
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font={"color": "#16202a", "family": "Inter, -apple-system, BlinkMacSystemFont, sans-serif"},
+        font={
+            "color": "#16202a",
+            "family": "Inter, -apple-system, BlinkMacSystemFont, sans-serif",
+        },
         xaxis_title="关注分",
     )
     st.plotly_chart(figure, use_container_width=True)
@@ -1851,7 +1942,10 @@ def render_attention_page(provider: str, force_refresh: bool) -> None:
     for item in top:
         tags = "".join(
             f'<span class="tag">{html.escape(tag)}</span>'
-            for tag in (f"{item.master_count} 位大师", f"共识 {item.consensus_score:.1f}")
+            for tag in (
+                f"{item.master_count} 位大师",
+                f"共识 {item.consensus_score:.1f}",
+            )
         )
         cards.append(
             '<div class="attention-card">'
@@ -1863,7 +1957,9 @@ def render_attention_page(provider: str, force_refresh: bool) -> None:
             f'<div class="consensus-meta">研究线索：{html.escape(item.reason)}</div>'
             "</div>"
         )
-    st.markdown(f'<div class="attention-grid">{"".join(cards)}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="attention-grid">{"".join(cards)}</div>', unsafe_allow_html=True
+    )
 
     frame = pd.DataFrame(
         [
@@ -1914,7 +2010,9 @@ def main() -> None:
             )
         else:
             st.header("分析设置")
-            st.caption("输入美股、A股、港股或日股代码。例：SPY、600519、HK:700、0700.HK、JP:7203、7203.T。")
+            st.caption(
+                "输入美股、A股、港股或日股代码。例：SPY、600519、HK:700、0700.HK、JP:7203、7203.T。"
+            )
             default_ticker = get_default_ticker()
             market_filter = st.selectbox(
                 "ETF 市场",
@@ -1948,9 +2046,14 @@ def main() -> None:
                 ticker = selected_preset.symbol
                 selected_preset_style = selected_preset.style
                 selected_preset_theme = selected_preset.theme
-                st.caption(f"{selected_preset.market} · {selected_preset.style} · {selected_preset.theme} · {selected_preset.note}")
+                st.caption(
+                    f"{selected_preset.market} · {selected_preset.style} · {selected_preset.theme} · {selected_preset.note}"
+                )
             else:
-                ticker = st.text_input("标的代码", value=default_ticker).strip().upper() or default_ticker
+                ticker = (
+                    st.text_input("标的代码", value=default_ticker).strip().upper()
+                    or default_ticker
+                )
                 selected_preset_style = None
                 selected_preset_theme = None
             with st.expander("查看当前 ETF 列表", expanded=False):
@@ -1976,8 +2079,12 @@ def main() -> None:
                 step=1000.0,
                 help="只在本地用于估算情景影响，不会上传。",
             )
-            shock_pct = st.slider("压力/乐观情景幅度", min_value=3, max_value=25, value=10, step=1)
-            run_analysis = st.button("刷新行情与新闻", type="primary", use_container_width=True)
+            shock_pct = st.slider(
+                "压力/乐观情景幅度", min_value=3, max_value=25, value=10, step=1
+            )
+            run_analysis = st.button(
+                "刷新行情与新闻", type="primary", use_container_width=True
+            )
             force_daily_analysis = st.button(
                 "重新生成今日归因/批判",
                 use_container_width=True,
@@ -2027,7 +2134,9 @@ def main() -> None:
         snapshot["ticker"],
         snapshot["currency_symbol"],
     )
-    takeaway = build_plain_language_takeaway(metrics, snapshot["timeframe"], snapshot["news"])
+    takeaway = build_plain_language_takeaway(
+        metrics, snapshot["timeframe"], snapshot["news"]
+    )
     technical = build_technical_snapshot(price_frame)
     risk = build_risk_snapshot(price_frame)
     weather = build_weather_forecast(technical, risk)
@@ -2070,7 +2179,11 @@ def main() -> None:
     attribution = daily_analysis.attribution
     critique = daily_analysis.critique
 
-    render_header(snapshot, metrics, llm_available=llm_client.__class__.__name__ != "LocalFallbackLLMClient")
+    render_header(
+        snapshot,
+        metrics,
+        llm_available=llm_client.__class__.__name__ != "LocalFallbackLLMClient",
+    )
     render_runtime_notice()
     for error in snapshot.get("errors", []):
         st.warning(error)
@@ -2087,8 +2200,26 @@ def main() -> None:
         f"{cache_status} · 生成时间 {daily_analysis.generated_at}"
     )
 
-    overview_tab, dashboard_tab, frameworks_tab, news_tab, attribution_tab, critique_tab, policy_tab, data_tab = st.tabs(
-        ["总览", "投资仪表盘", "投资框架", "新闻", "归因", "大师批判", "更新节奏", "原始数据"]
+    (
+        overview_tab,
+        dashboard_tab,
+        frameworks_tab,
+        news_tab,
+        attribution_tab,
+        critique_tab,
+        policy_tab,
+        data_tab,
+    ) = st.tabs(
+        [
+            "总览",
+            "投资仪表盘",
+            "投资框架",
+            "新闻",
+            "归因",
+            "大师批判",
+            "更新节奏",
+            "原始数据",
+        ]
     )
 
     with overview_tab:
@@ -2145,7 +2276,10 @@ def main() -> None:
         st.markdown("</div>", unsafe_allow_html=True)
         if attribution.evidence:
             st.subheader("证据")
-            st.dataframe(pd.DataFrame([item.model_dump() for item in attribution.evidence]), hide_index=True)
+            st.dataframe(
+                pd.DataFrame([item.model_dump() for item in attribution.evidence]),
+                hide_index=True,
+            )
 
     with critique_tab:
         render_critique_cards(critique)
@@ -2155,7 +2289,9 @@ def main() -> None:
 
     with data_tab:
         st.subheader("新闻原始数据")
-        st.dataframe(pd.DataFrame(snapshot["news"]), hide_index=True, use_container_width=True)
+        st.dataframe(
+            pd.DataFrame(snapshot["news"]), hide_index=True, use_container_width=True
+        )
         st.subheader("价格原始数据")
         st.dataframe(price_frame, hide_index=True, use_container_width=True)
         st.subheader("本地组合状态")

@@ -6,8 +6,13 @@ from trader.agent_layer.llm import LocalFallbackLLMClient
 
 
 class FakeLLM:
-    def complete(self, *, system_prompt: str, user_payload: dict[str, Any]) -> tuple[str, bool]:
-        return f"fake response for {user_payload.get('ticker') or user_payload['market_snapshot']['ticker']}", False
+    def complete(
+        self, *, system_prompt: str, user_payload: dict[str, Any]
+    ) -> tuple[str, bool]:
+        return (
+            f"fake response for {user_payload.get('ticker') or user_payload['market_snapshot']['ticker']}",
+            False,
+        )
 
 
 def test_master_critique_runs_all_skills() -> None:
@@ -16,8 +21,22 @@ def test_master_critique_runs_all_skills() -> None:
         "ticker": "SPY",
         "timeframe": "5d",
         "prices": [
-            {"date": "2026-01-01", "open": 1, "high": 2, "low": 1, "close": 1, "volume": 10},
-            {"date": "2026-01-02", "open": 2, "high": 3, "low": 2, "close": 2, "volume": 20},
+            {
+                "date": "2026-01-01",
+                "open": 1,
+                "high": 2,
+                "low": 1,
+                "close": 1,
+                "volume": 10,
+            },
+            {
+                "date": "2026-01-02",
+                "open": 2,
+                "high": 3,
+                "low": 2,
+                "close": 2,
+                "volume": 20,
+            },
         ],
         "news": [{"title": "test news", "publisher": "test"}],
     }
@@ -42,8 +61,22 @@ def test_local_master_critique_references_selected_asset_context() -> None:
         "selected_preset_style": "科技成长",
         "selected_preset_theme": "科技/成长",
         "prices": [
-            {"date": "2026-01-01", "open": 100, "high": 101, "low": 99, "close": 100, "volume": 10},
-            {"date": "2026-01-02", "open": 108, "high": 110, "low": 107, "close": 108, "volume": 20},
+            {
+                "date": "2026-01-01",
+                "open": 100,
+                "high": 101,
+                "low": 99,
+                "close": 100,
+                "volume": 10,
+            },
+            {
+                "date": "2026-01-02",
+                "open": 108,
+                "high": 110,
+                "low": 107,
+                "close": 108,
+                "volume": 20,
+            },
         ],
         "news": [{"title": "AI stocks rally", "publisher": "test"}],
     }

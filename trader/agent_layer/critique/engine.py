@@ -53,8 +53,12 @@ class MasterCritiqueEngine:
                         "provider_symbol": market_snapshot.get("provider_symbol"),
                         "asset_type_hint": _asset_type_hint(market_snapshot),
                         "price_move_pct": price_move,
-                        "selected_preset_style": market_snapshot.get("selected_preset_style"),
-                        "selected_preset_theme": market_snapshot.get("selected_preset_theme"),
+                        "selected_preset_style": market_snapshot.get(
+                            "selected_preset_style"
+                        ),
+                        "selected_preset_theme": market_snapshot.get(
+                            "selected_preset_theme"
+                        ),
                         "prices": market_snapshot["prices"][-10:],
                         "news": market_snapshot["news"][:5],
                     },
@@ -62,7 +66,9 @@ class MasterCritiqueEngine:
                     "attribution": attribution.model_dump(),
                 },
             )
-            views.append(CritiqueView(name=name, commentary=commentary, llm_used=llm_used))
+            views.append(
+                CritiqueView(name=name, commentary=commentary, llm_used=llm_used)
+            )
 
         return CritiqueResult(
             views=views,

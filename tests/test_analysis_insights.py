@@ -43,17 +43,27 @@ def test_build_technical_snapshot_labels_uptrend() -> None:
 def test_build_risk_snapshot_and_scenarios() -> None:
     frame = _sample_frame()
     risk = build_risk_snapshot(frame)
-    scenarios = build_scenario_table(frame, position_value=10_000, shock_pct=10, currency_symbol="$")
+    scenarios = build_scenario_table(
+        frame, position_value=10_000, shock_pct=10, currency_symbol="$"
+    )
 
     assert risk["max_drawdown"] == 0
-    assert list(scenarios["情景"]) == ["压力情景", "温和回调", "基准不变", "温和上涨", "乐观情景"]
+    assert list(scenarios["情景"]) == [
+        "压力情景",
+        "温和回调",
+        "基准不变",
+        "温和上涨",
+        "乐观情景",
+    ]
     assert scenarios.iloc[0]["持仓影响"] == "$-1,000"
 
 
 def test_action_checklist_uses_position_context() -> None:
     technical = build_technical_snapshot(_sample_frame())
     risk = build_risk_snapshot(_sample_frame())
-    checklist = build_action_checklist(technical, risk, move_pct=3, position_value=0, ticker="SPY")
+    checklist = build_action_checklist(
+        technical, risk, move_pct=3, position_value=0, ticker="SPY"
+    )
 
     assert len(checklist) == 4
     assert "输入你的 SPY 持仓市值" in checklist[-1]

@@ -20,20 +20,86 @@ class EtfPreset:
 ETF_PRESETS = [
     EtfPreset("SPY", "S&P 500", "美股", "大盘核心", "大盘", "美国大盘核心暴露"),
     EtfPreset("VOO", "Vanguard S&P 500", "美股", "大盘核心", "大盘", "低费率 S&P 500"),
-    EtfPreset("QQQ", "Nasdaq 100", "美股", "科技成长", "科技/成长", "大型科技与成长权重高"),
-    EtfPreset("QQQM", "Nasdaq 100 低费率版本", "美股", "科技成长", "科技/成长", "QQQ 的低费率版本"),
-    EtfPreset("VGT", "Vanguard Information Technology", "美股", "科技成长", "科技", "美国信息技术行业"),
-    EtfPreset("XLK", "Technology Select Sector", "美股", "科技成长", "科技", "S&P 500 科技板块"),
+    EtfPreset(
+        "QQQ", "Nasdaq 100", "美股", "科技成长", "科技/成长", "大型科技与成长权重高"
+    ),
+    EtfPreset(
+        "QQQM",
+        "Nasdaq 100 低费率版本",
+        "美股",
+        "科技成长",
+        "科技/成长",
+        "QQQ 的低费率版本",
+    ),
+    EtfPreset(
+        "VGT",
+        "Vanguard Information Technology",
+        "美股",
+        "科技成长",
+        "科技",
+        "美国信息技术行业",
+    ),
+    EtfPreset(
+        "XLK",
+        "Technology Select Sector",
+        "美股",
+        "科技成长",
+        "科技",
+        "S&P 500 科技板块",
+    ),
     EtfPreset("VUG", "Vanguard Growth", "美股", "成长", "成长", "美国大盘成长"),
-    EtfPreset("SCHG", "Schwab U.S. Large-Cap Growth", "美股", "成长", "成长", "美国大盘成长"),
-    EtfPreset("IWF", "Russell 1000 Growth", "美股", "成长", "成长", "Russell 1000 成长"),
-    EtfPreset("SMH", "VanEck Semiconductor", "美股", "科技成长", "半导体", "全球半导体龙头"),
-    EtfPreset("USMV", "MSCI USA Minimum Volatility", "美股", "低波红利", "低波", "美国最小波动因子"),
-    EtfPreset("SPLV", "S&P 500 Low Volatility", "美股", "低波红利", "低波", "S&P 500 低波动"),
-    EtfPreset("SPHD", "S&P 500 High Dividend Low Volatility", "美股", "低波红利", "红利/低波", "高股息 + 低波动"),
-    EtfPreset("SCHD", "Schwab U.S. Dividend Equity", "美股", "低波红利", "红利", "美国股息质量"),
-    EtfPreset("VIG", "Vanguard Dividend Appreciation", "美股", "低波红利", "红利成长", "股息增长"),
-    EtfPreset("DGRO", "iShares Core Dividend Growth", "美股", "低波红利", "红利成长", "股息增长"),
+    EtfPreset(
+        "SCHG", "Schwab U.S. Large-Cap Growth", "美股", "成长", "成长", "美国大盘成长"
+    ),
+    EtfPreset(
+        "IWF", "Russell 1000 Growth", "美股", "成长", "成长", "Russell 1000 成长"
+    ),
+    EtfPreset(
+        "SMH", "VanEck Semiconductor", "美股", "科技成长", "半导体", "全球半导体龙头"
+    ),
+    EtfPreset(
+        "USMV",
+        "MSCI USA Minimum Volatility",
+        "美股",
+        "低波红利",
+        "低波",
+        "美国最小波动因子",
+    ),
+    EtfPreset(
+        "SPLV", "S&P 500 Low Volatility", "美股", "低波红利", "低波", "S&P 500 低波动"
+    ),
+    EtfPreset(
+        "SPHD",
+        "S&P 500 High Dividend Low Volatility",
+        "美股",
+        "低波红利",
+        "红利/低波",
+        "高股息 + 低波动",
+    ),
+    EtfPreset(
+        "SCHD",
+        "Schwab U.S. Dividend Equity",
+        "美股",
+        "低波红利",
+        "红利",
+        "美国股息质量",
+    ),
+    EtfPreset(
+        "VIG",
+        "Vanguard Dividend Appreciation",
+        "美股",
+        "低波红利",
+        "红利成长",
+        "股息增长",
+    ),
+    EtfPreset(
+        "DGRO",
+        "iShares Core Dividend Growth",
+        "美股",
+        "低波红利",
+        "红利成长",
+        "股息增长",
+    ),
     EtfPreset("510300", "沪深300ETF", "A股", "大盘核心", "大盘", "A股大盘核心"),
     EtfPreset("510050", "上证50ETF", "A股", "大盘核心", "大盘", "沪市大盘蓝筹"),
     EtfPreset("588000", "科创50ETF", "A股", "科技成长", "科技/成长", "科创板科技成长"),
@@ -42,22 +108,93 @@ ETF_PRESETS = [
     EtfPreset("512480", "半导体ETF", "A股", "科技成长", "半导体", "A股半导体产业"),
     EtfPreset("515000", "科技ETF", "A股", "科技成长", "科技", "A股科技龙头"),
     EtfPreset("159995", "芯片ETF", "A股", "科技成长", "芯片", "A股芯片产业"),
-    EtfPreset("512890", "红利低波ETF", "A股", "低波红利", "红利/低波", "中证红利低波动"),
+    EtfPreset(
+        "512890", "红利低波ETF", "A股", "低波红利", "红利/低波", "中证红利低波动"
+    ),
     EtfPreset("515100", "低波红利ETF", "A股", "低波红利", "红利/低波", "红利低波100"),
     EtfPreset("510880", "红利ETF", "A股", "低波红利", "红利", "上证红利"),
     EtfPreset("515080", "中证红利ETF", "A股", "低波红利", "红利", "中证红利"),
-    EtfPreset("2800.HK", "盈富基金 Tracker Fund of Hong Kong", "港股", "大盘核心", "大盘", "香港恒生指数核心暴露"),
-    EtfPreset("3033.HK", "南方恒生科技 ETF", "港股", "科技成长", "科技/成长", "恒生科技指数"),
-    EtfPreset("3067.HK", "安硕恒生科技 ETF", "港股", "科技成长", "科技/成长", "恒生科技指数低成本工具"),
-    EtfPreset("2828.HK", "恒生中国企业 ETF", "港股", "大盘核心", "大盘", "H 股大型公司"),
-    EtfPreset("3110.HK", "Global X 恒生高股息率 ETF", "港股", "低波红利", "红利", "香港高股息率股票"),
-    EtfPreset("3145.HK", "Global X 亚洲高股息率 ETF", "港股", "低波红利", "红利", "亚洲高股息股票"),
-    EtfPreset("1321.T", "NEXT FUNDS Nikkei 225 ETF", "日本股", "大盘核心", "大盘", "日经225核心暴露"),
-    EtfPreset("1306.T", "NEXT FUNDS TOPIX ETF", "日本股", "大盘核心", "大盘", "日本东证指数广泛暴露"),
-    EtfPreset("2568.T", "上场インデックスファンド米国株式 Nasdaq100", "日本股", "科技成长", "科技/成长", "日本上市 Nasdaq 100 ETF"),
-    EtfPreset("2644.T", "Global X Japan Semiconductor ETF", "日本股", "科技成长", "半导体", "日本半导体主题"),
-    EtfPreset("2516.T", "TSE Growth Core ETF", "日本股", "成长", "成长", "日本成长股暴露"),
-    EtfPreset("1478.T", "iShares MSCI Japan High Dividend ETF", "日本股", "低波红利", "红利", "日本高股息股票"),
+    EtfPreset(
+        "2800.HK",
+        "盈富基金 Tracker Fund of Hong Kong",
+        "港股",
+        "大盘核心",
+        "大盘",
+        "香港恒生指数核心暴露",
+    ),
+    EtfPreset(
+        "3033.HK", "南方恒生科技 ETF", "港股", "科技成长", "科技/成长", "恒生科技指数"
+    ),
+    EtfPreset(
+        "3067.HK",
+        "安硕恒生科技 ETF",
+        "港股",
+        "科技成长",
+        "科技/成长",
+        "恒生科技指数低成本工具",
+    ),
+    EtfPreset(
+        "2828.HK", "恒生中国企业 ETF", "港股", "大盘核心", "大盘", "H 股大型公司"
+    ),
+    EtfPreset(
+        "3110.HK",
+        "Global X 恒生高股息率 ETF",
+        "港股",
+        "低波红利",
+        "红利",
+        "香港高股息率股票",
+    ),
+    EtfPreset(
+        "3145.HK",
+        "Global X 亚洲高股息率 ETF",
+        "港股",
+        "低波红利",
+        "红利",
+        "亚洲高股息股票",
+    ),
+    EtfPreset(
+        "1321.T",
+        "NEXT FUNDS Nikkei 225 ETF",
+        "日本股",
+        "大盘核心",
+        "大盘",
+        "日经225核心暴露",
+    ),
+    EtfPreset(
+        "1306.T",
+        "NEXT FUNDS TOPIX ETF",
+        "日本股",
+        "大盘核心",
+        "大盘",
+        "日本东证指数广泛暴露",
+    ),
+    EtfPreset(
+        "2568.T",
+        "上场インデックスファンド米国株式 Nasdaq100",
+        "日本股",
+        "科技成长",
+        "科技/成长",
+        "日本上市 Nasdaq 100 ETF",
+    ),
+    EtfPreset(
+        "2644.T",
+        "Global X Japan Semiconductor ETF",
+        "日本股",
+        "科技成长",
+        "半导体",
+        "日本半导体主题",
+    ),
+    EtfPreset(
+        "2516.T", "TSE Growth Core ETF", "日本股", "成长", "成长", "日本成长股暴露"
+    ),
+    EtfPreset(
+        "1478.T",
+        "iShares MSCI Japan High Dividend ETF",
+        "日本股",
+        "低波红利",
+        "红利",
+        "日本高股息股票",
+    ),
 ]
 
 

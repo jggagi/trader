@@ -9,7 +9,13 @@ from trader.data_layer.master_holdings import (
 def test_master_portfolios_include_requested_investors() -> None:
     names = set(get_master_names())
 
-    assert {"Warren Buffett", "Charlie Munger", "Duan Yongping", "Li Lu", "Ray Dalio"} <= names
+    assert {
+        "Warren Buffett",
+        "Charlie Munger",
+        "Duan Yongping",
+        "Li Lu",
+        "Ray Dalio",
+    } <= names
 
 
 def test_master_portfolios_have_sources_and_holdings() -> None:

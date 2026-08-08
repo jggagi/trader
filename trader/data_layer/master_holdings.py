@@ -186,7 +186,9 @@ def get_consensus_holdings(min_holders: int = 2) -> list[ConsensusHolding]:
         names = [holding.name for _, holding in entries if holding.symbol == symbol]
         name = names[0] if names else first_holding.name
         themes = sorted({holding.note for _, holding in entries})
-        average_weight_score = sum(_weight_score(holding.weight) for _, holding in entries) / len(entries)
+        average_weight_score = sum(
+            _weight_score(holding.weight) for _, holding in entries
+        ) / len(entries)
         score = round(len(masters) * 20 + average_weight_score * 40, 1)
         if len(masters) >= 3:
             conviction_label = "高共识"
@@ -207,4 +209,8 @@ def get_consensus_holdings(min_holders: int = 2) -> list[ConsensusHolding]:
             )
         )
 
-    return sorted(consensus, key=lambda item: (item.holder_count, item.score, item.symbol), reverse=True)
+    return sorted(
+        consensus,
+        key=lambda item: (item.holder_count, item.score, item.symbol),
+        reverse=True,
+    )

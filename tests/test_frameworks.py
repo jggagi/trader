@@ -22,9 +22,19 @@ def test_stock_frameworks_include_macro_context_and_value_lens() -> None:
     assert "Buffett-Munger 价值投资框架" in names
     assert all(framework.items for framework in frameworks)
     assert all(framework.next_questions for framework in frameworks)
-    assert all(item.simulated_answer for framework in frameworks for item in framework.items)
-    assert any("AAPL" in item.simulated_answer for framework in frameworks for item in framework.items)
-    assert any("Apple reports services growth" in item.simulated_answer for framework in frameworks for item in framework.items)
+    assert all(
+        item.simulated_answer for framework in frameworks for item in framework.items
+    )
+    assert any(
+        "AAPL" in item.simulated_answer
+        for framework in frameworks
+        for item in framework.items
+    )
+    assert any(
+        "Apple reports services growth" in item.simulated_answer
+        for framework in frameworks
+        for item in framework.items
+    )
 
 
 def test_value_framework_warns_about_chasing_strength() -> None:
@@ -38,7 +48,9 @@ def test_value_framework_warns_about_chasing_strength() -> None:
     value_framework = frameworks[1]
 
     assert "安全边际" in value_framework.current_read
-    assert any("上涨后更要保守" in item.simulated_answer for item in value_framework.items)
+    assert any(
+        "上涨后更要保守" in item.simulated_answer for item in value_framework.items
+    )
 
 
 def test_broad_etf_skips_single_company_value_framework() -> None:

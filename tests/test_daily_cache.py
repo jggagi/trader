@@ -9,8 +9,12 @@ from trader.models import AttributionResult, CritiqueResult, CritiqueView
 
 
 def test_daily_cache_key_changes_by_day() -> None:
-    today = build_daily_cache_key(provider="yahoo", ticker="AAPL", timeframe="1mo", day=date(2026, 5, 23))
-    tomorrow = build_daily_cache_key(provider="yahoo", ticker="AAPL", timeframe="1mo", day=date(2026, 5, 24))
+    today = build_daily_cache_key(
+        provider="yahoo", ticker="AAPL", timeframe="1mo", day=date(2026, 5, 23)
+    )
+    tomorrow = build_daily_cache_key(
+        provider="yahoo", ticker="AAPL", timeframe="1mo", day=date(2026, 5, 24)
+    )
 
     assert today != tomorrow
     assert "AAPL" in today
@@ -18,8 +22,12 @@ def test_daily_cache_key_changes_by_day() -> None:
 
 def test_daily_analysis_round_trips(tmp_path) -> None:
     cache_key = "2026-05-23__yahoo__AAPL__1mo"
-    attribution = AttributionResult(ticker="AAPL", timeframe="1mo", narrative="归因", llm_used=True)
-    critique = CritiqueResult(views=[CritiqueView(name="Warren Buffett", commentary="批判", llm_used=True)])
+    attribution = AttributionResult(
+        ticker="AAPL", timeframe="1mo", narrative="归因", llm_used=True
+    )
+    critique = CritiqueResult(
+        views=[CritiqueView(name="Warren Buffett", commentary="批判", llm_used=True)]
+    )
 
     saved = save_daily_analysis(
         cache_key=cache_key,

@@ -45,4 +45,3 @@ class CritiqueView(BaseModel):
 class CritiqueResult(BaseModel):
     views: list[CritiqueView] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
-

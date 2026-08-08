@@ -6,4 +6,3 @@ class LocalDocumentParser:
 
     def get_portfolio_state(self) -> dict:
         return {}
-

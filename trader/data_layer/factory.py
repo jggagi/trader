@@ -19,4 +19,3 @@ def create_market_data_fetcher(provider: DataProvider | str) -> BaseMarketDataFe
     if normalized == DataProvider.GOOGLE_MOCK:
         return GoogleFinanceFetcher()
     raise ValueError(f"Unsupported data provider: {provider}")
-
