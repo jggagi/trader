@@ -12,7 +12,11 @@ import streamlit as st
 
 from trader.agent_layer.attribution.engine import AttributionEngine
 from trader.agent_layer.critique.engine import MasterCritiqueEngine
-from trader.agent_layer.daily_cache import DailyAnalysis, build_daily_cache_key, load_daily_analysis, save_daily_analysis
+from trader.agent_layer.daily_cache import (
+    DailyAnalysis,
+    build_daily_cache_key,
+    resolve_daily_analysis,
+)
 from trader.agent_layer.llm import build_default_llm_client
 from trader.analysis_layer.attention import AttentionCandidate, build_attention_candidates
 from trader.analysis_layer.frameworks import build_investment_frameworks
@@ -35,6 +39,7 @@ from trader.data_layer.master_holdings import (
     get_master_portfolio,
 )
 from trader.data_layer.symbols import resolve_symbol
+from trader.models import AttributionResult, CritiqueResult
 from trader.state_layer.parser import LocalDocumentParser
 
 
@@ -962,32 +967,31 @@ def get_daily_analysis(
     snapshot: dict,
     portfolio_state: dict,
     force_refresh: bool = False,
-) -> DailyAnalysis:
+) -> DailyAnalysis | None:
     cache_key = build_daily_cache_key(
         provider=snapshot["provider"],
         ticker=snapshot["provider_symbol"],
         timeframe=snapshot["timeframe"],
     )
     can_cache = not portfolio_state
-    if can_cache and not force_refresh:
-        cached = load_daily_analysis(cache_key)
-        if cached:
-            return cached
 
-    attribution = AttributionEngine(llm_client).run(snapshot)
-    critique = MasterCritiqueEngine(llm_client).run(
-        market_snapshot=snapshot,
-        portfolio_state=portfolio_state,
-        attribution=attribution,
-    )
-    if not can_cache:
-        return DailyAnalysis(
+    def generate() -> tuple[AttributionResult, CritiqueResult]:
+        attribution = AttributionEngine(llm_client).run(snapshot)
+        critique = MasterCritiqueEngine(llm_client).run(
+            market_snapshot=snapshot,
+            portfolio_state=portfolio_state,
             attribution=attribution,
-            critique=critique,
-            generated_at="本次会话",
-            cache_hit=False,
         )
-    return save_daily_analysis(cache_key=cache_key, attribution=attribution, critique=critique)
+        return attribution, critique
+
+    # A cache miss is not consent to run the LLM. The sidebar button is the
+    # only path that sets force_refresh and invokes the generation callback.
+    return resolve_daily_analysis(
+        cache_key,
+        should_generate=force_refresh,
+        generate=generate,
+        cache_results=can_cache,
+    )
 
 
 def render_update_policy_panel(compact: bool = False) -> None:
@@ -2067,8 +2071,8 @@ def main() -> None:
             portfolio_state=portfolio_state,
             force_refresh=force_daily_analysis,
         )
-    attribution = daily_analysis.attribution
-    critique = daily_analysis.critique
+    attribution = daily_analysis.attribution if daily_analysis else None
+    critique = daily_analysis.critique if daily_analysis else None
 
     render_header(snapshot, metrics, llm_available=llm_client.__class__.__name__ != "LocalFallbackLLMClient")
     render_runtime_notice()
@@ -2079,12 +2083,16 @@ def main() -> None:
     render_data_freshness_notice(snapshot)
     render_takeaway_panel(takeaway)
     render_metrics(metrics)
-    cache_status = "复用今日缓存" if daily_analysis.cache_hit else "今日已生成"
     market_policy = get_policy("行情价格 / 新闻")
     analysis_policy = get_policy("归因 / 大师批判")
+    if daily_analysis:
+        cache_status = "复用今日缓存" if daily_analysis.cache_hit else "今日已生成"
+        analysis_status = f"{cache_status} · 生成时间 {daily_analysis.generated_at}"
+    else:
+        analysis_status = "点击侧栏“重新生成今日归因/批判”后运行"
     st.caption(
         f"行情 / 新闻：{market_policy.cadence_label} · 归因 / 大师批判：{analysis_policy.cadence_label}，"
-        f"{cache_status} · 生成时间 {daily_analysis.generated_at}"
+        f"{analysis_status}"
     )
 
     overview_tab, dashboard_tab, frameworks_tab, news_tab, attribution_tab, critique_tab, policy_tab, data_tab = st.tabs(
@@ -2141,14 +2149,20 @@ def main() -> None:
     with attribution_tab:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.subheader("客观归因")
-        st.write(attribution.narrative)
+        if attribution:
+            st.write(attribution.narrative)
+        else:
+            st.info("点击侧栏“重新生成今日归因/批判”后生成归因。")
         st.markdown("</div>", unsafe_allow_html=True)
-        if attribution.evidence:
+        if attribution and attribution.evidence:
             st.subheader("证据")
             st.dataframe(pd.DataFrame([item.model_dump() for item in attribution.evidence]), hide_index=True)
 
     with critique_tab:
-        render_critique_cards(critique)
+        if critique:
+            render_critique_cards(critique)
+        else:
+            st.info("点击侧栏“重新生成今日归因/批判”后生成大师批判。")
 
     with policy_tab:
         render_update_policy_panel()

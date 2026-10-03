@@ -18,7 +18,7 @@ A modular Streamlit app for market attribution, local investment dashboards, ris
 ## Run Locally
 
 ```bash
-python -m venv .venv
+uv venv --python 3.12 .venv
 source .venv/bin/activate
 make setup
 make run

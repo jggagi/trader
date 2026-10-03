@@ -9,7 +9,7 @@ __pycache__/
 .coverage
 htmlcov/
 
-.venv/
+.venv
 venv/
 env/
 
@@ -20,3 +20,6 @@ env/
 .streamlit/secrets.toml
 
 *.log
+
+# Reversible backup of the environment created during this setup
+.venv.bootstrap-20261002/

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -68,4 +69,37 @@ def save_daily_analysis(
         critique=critique,
         generated_at=generated_at,
         cache_hit=False,
+    )
+
+
+def resolve_daily_analysis(
+    cache_key: str,
+    *,
+    should_generate: bool,
+    generate: Callable[[], tuple[AttributionResult, CritiqueResult]],
+    cache_results: bool = True,
+    cache_dir: Path | None = None,
+) -> DailyAnalysis | None:
+    """Load cached analysis, or generate only after an explicit request."""
+    if cache_results and not should_generate:
+        cached = load_daily_analysis(cache_key, cache_dir=cache_dir)
+        if cached:
+            return cached
+
+    if not should_generate:
+        return None
+
+    attribution, critique = generate()
+    if not cache_results:
+        return DailyAnalysis(
+            attribution=attribution,
+            critique=critique,
+            generated_at="本次会话",
+            cache_hit=False,
+        )
+    return save_daily_analysis(
+        cache_key=cache_key,
+        attribution=attribution,
+        critique=critique,
+        cache_dir=cache_dir,
     )
