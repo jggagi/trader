@@ -3,6 +3,55 @@
   "emoji": "📈",
   "description": "Multi-Asset Trading Strategy & Market Intelligence Dashboard",
   "type": "proxy",
-  "target": "http://localhost:8501",
-  "route": "/trading-master"
+  "target": "http://127.0.0.1:8501",
+  "route": "/trading-master",
+  "runtime": {
+    "manager": "pm2",
+    "units": [
+      "trading-master"
+    ],
+    "displayName": "Trading Master service",
+    "readOnly": false,
+    "allowedActions": [
+      "start",
+      "restart"
+    ]
+  },
+  "launchOnHubHost": true,
+  "readiness": {
+    "dependencies": [
+      {
+        "id": "python",
+        "label": "Python 环境",
+        "kind": "file",
+        "path": ".venv/bin/python",
+        "help": "检查项目 .venv 链接及独立环境是否可访问。"
+      },
+      {
+        "id": "development-volume",
+        "label": "开发卷启动门禁",
+        "kind": "agent-dev",
+        "help": "连接正确的 WD_BLACK 和 AgentDev，并满足容量门禁后重试。",
+        "scope": "startup"
+      },
+      {
+        "id": "streamlit",
+        "label": "Streamlit 服务",
+        "kind": "http",
+        "url": "http://127.0.0.1:8501/_stcore/health",
+        "help": "通过运行控制启动 Trading Master，再重新检查。"
+      }
+    ],
+    "capabilities": [
+      {
+        "id": "dashboard",
+        "label": "图表与已有分析",
+        "requires": [
+          "page",
+          "streamlit",
+          "python"
+        ]
+      }
+    ]
+  }
 }
