@@ -14,6 +14,7 @@ from trader.agent_layer.attribution.engine import AttributionEngine
 from trader.agent_layer.critique.engine import MasterCritiqueEngine
 from trader.agent_layer.daily_cache import (
     DailyAnalysis,
+    DailyAnalysisCacheError,
     build_daily_cache_key,
     resolve_daily_analysis,
 )
@@ -39,6 +40,7 @@ from trader.data_layer.master_holdings import (
     get_master_portfolio,
 )
 from trader.data_layer.symbols import resolve_symbol
+from trader.data_layer.status import describe_market_data
 from trader.models import AttributionResult, CritiqueResult
 from trader.state_layer.parser import LocalDocumentParser
 
@@ -925,26 +927,16 @@ def _market_update_rule(market: str) -> tuple[str, time]:
 
 
 def render_data_freshness_notice(snapshot: dict) -> None:
-    prices = snapshot.get("prices") or []
-    if not prices:
-        st.warning("当前数据源没有返回价格数据。")
-        return
-
-    last_date = str(prices[-1].get("date", ""))
     provider_symbol = snapshot.get("provider_symbol", snapshot.get("ticker", "标的"))
     market = snapshot.get("market", "")
     symbol = resolve_symbol(provider_symbol)
-    timezone_name, close_buffer = _market_update_rule(market or symbol.market)
+    timezone_name, _ = _market_update_rule(market or symbol.market)
     market_now = datetime.now(ZoneInfo(timezone_name))
-    market_today = market_now.date().isoformat()
-    phase = "盘后" if market_now.time() >= close_buffer else "盘中/盘前"
-    if last_date == market_today:
-        st.caption(f"最新行情日期：{last_date} · {provider_symbol} · {phase}数据已更新")
-        return
-    st.warning(
-        f"最新行情日期：{last_date}，不是 {market_today}。"
-        f"可能原因：市场休市、数据源尚未发布收盘数据，或需要点击“刷新行情与新闻”。"
-    )
+    status = describe_market_data(snapshot, market_today=market_now.date())
+    if status.kind in {"empty", "stale", "unknown"}:
+        st.warning(status.message)
+    else:
+        st.info(status.message)
 
 
 @st.cache_data(ttl=86400, show_spinner=False)
@@ -1244,7 +1236,7 @@ def render_drawdown_chart(frame: pd.DataFrame) -> None:
 
 
 def render_header(snapshot: dict, metrics: dict, llm_available: bool) -> None:
-    llm_label = "AI 已连接" if llm_available else "本地占位分析"
+    llm_label = "AI 配置已载入" if llm_available else "本地规则分析"
     timeframe = TIMEFRAME_OPTIONS.get(snapshot["timeframe"], snapshot["timeframe"])
     st.markdown(
         f"""
@@ -2065,12 +2057,19 @@ def main() -> None:
         checklist=checklist,
     )
     with st.spinner("Preparing daily attribution and critique"):
-        daily_analysis = get_daily_analysis(
-            llm_client=llm_client,
-            snapshot=snapshot,
-            portfolio_state=portfolio_state,
-            force_refresh=force_daily_analysis,
-        )
+        try:
+            daily_analysis = get_daily_analysis(
+                llm_client=llm_client,
+                snapshot=snapshot,
+                portfolio_state=portfolio_state,
+                force_refresh=force_daily_analysis,
+            )
+        except DailyAnalysisCacheError as exc:
+            st.warning(str(exc))
+            daily_analysis = None
+        except OSError:
+            st.warning("分析或本地缓存保存失败，原有缓存已保留。请检查连接和本地存储后明确重试。")
+            daily_analysis = None
     attribution = daily_analysis.attribution if daily_analysis else None
     critique = daily_analysis.critique if daily_analysis else None
 

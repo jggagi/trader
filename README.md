@@ -80,3 +80,19 @@ The original design is local-first. A public deployment changes the threat model
 ```bash
 pytest
 ```
+
+The market-data notice distinguishes simulated, current daily, non-current,
+empty, and unknown-date results. Yahoo's daily bars are explicitly labeled as
+non-realtime. Loading AI configuration does not claim a successful model call.
+Refreshing prices does not trigger attribution or critique; that action remains
+the explicit sidebar button.
+
+An unreadable analysis cache remains untouched and produces a visible warning.
+Explicit regeneration retains its previous bytes in a `.json.backup` file and
+publishes the new cache through an atomic replacement. This derived cache is
+separate from the Markdown report and the placeholder portfolio parser.
+
+`tests/test_app_journey.py` exercises actual Streamlit controls with synthetic
+providers, a temporary cache, a disabled secrets loader, and blocked external
+requests. This verifies UI behavior; actual provider/model acceptance is tracked
+separately by the workspace roadmap.
