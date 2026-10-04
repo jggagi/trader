@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
@@ -8,6 +8,8 @@ from streamlit.testing.v1 import AppTest
 from trader.agent_layer import daily_cache, llm
 from trader.data_layer import factory
 from trader.models import NewsItem, PricePoint
+
+FIXED_NOW = datetime(2026, 10, 3, 12, tzinfo=timezone.utc)
 
 
 def test_real_streamlit_controls_use_synthetic_sources_and_only_generate_explicitly(tmp_path, monkeypatch):
@@ -20,7 +22,7 @@ def test_real_streamlit_controls_use_synthetic_sources_and_only_generate_explici
             calls["prices"] += 1
             if mode["kind"] == "empty":
                 return []
-            today = date.today() - timedelta(days=30 if mode["kind"] == "stale" else 0)
+            today = FIXED_NOW.date() - timedelta(days=30 if mode["kind"] == "stale" else 0)
             return [PricePoint(date=(today-timedelta(days=29-i)).isoformat(), open=100+i, high=102+i, low=99+i, close=101+i, volume=1000) for i in range(30)]
 
         def get_recent_news(self, ticker):
@@ -46,7 +48,14 @@ def test_real_streamlit_controls_use_synthetic_sources_and_only_generate_explici
     # run_name prevents automatic main; disabling the secrets loader prevents
     # the test from reading the user's Streamlit configuration or credentials.
     at = AppTest.from_string(
+        "from datetime import datetime as _datetime, timezone as _timezone\n"
+        "FIXED_NOW = _datetime(2026, 10, 3, 12, tzinfo=_timezone.utc)\n"
+        "class SyntheticDateTime(_datetime):\n"
+        "    @classmethod\n"
+        "    def now(cls, tz=None):\n"
+        "        return FIXED_NOW.astimezone(tz) if tz is not None else FIXED_NOW.replace(tzinfo=None)\n"
         f"import runpy\napp = runpy.run_path({app_path!r}, run_name='m6_synthetic')\n"
+        "app['main'].__globals__['datetime'] = SyntheticDateTime\n"
         "app['main'].__globals__['configure_streamlit_secrets'] = lambda: None\napp['main']()",
         default_timeout=20,
     ).run()
